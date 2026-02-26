@@ -1,7 +1,45 @@
 # Supabase Debug Playground
 
 A **5-episode video series** repo demonstrating common Supabase debugging scenarios.  
-Each episode has a **break → run → fix → verify** workflow you can execute entirely from the terminal — no dashboard required.
+Each episode has a **reset → break → run → fix → verify** workflow you can execute entirely from the terminal — no dashboard required.
+
+---
+
+## Episode Recording Loop
+
+This is the exact loop to follow for every episode.  
+Steps 1–3 are scripted. Step 4 is manual (that's the learning moment). Step 5 confirms success.
+
+```bash
+# 1. Return to a known-good baseline
+pnpm epN:reset
+
+# 2. Intentionally introduce the failure
+pnpm epN:break
+
+# 3. Reproduce the issue and read the output
+pnpm epN:run
+
+# 4. Fix the issue manually in your IDE
+#    (read prompts/epN.md for context + diagnostic hints to paste into Copilot)
+
+# 5. Re-run to confirm output changed
+pnpm epN:run
+
+# 6. Verify all assertions pass
+pnpm epN:verify
+```
+
+Replace `N` with `1`, `2`, `3`, `4`, or `5`.
+
+### Reset commands
+
+| Command | What it resets |
+|---------|---------------|
+| `pnpm epN:reset` | Per-episode reset (code file or DB depending on episode) |
+| `pnpm reset:code` | `git checkout -- . && git clean -fd` — reverts all code changes |
+| `pnpm reset:db` | `supabase db reset` — re-runs all migrations + seed |
+| `pnpm reset:all` | Both of the above |
 
 ---
 
@@ -14,20 +52,55 @@ supabase-debug-playground/
 ├── package.json
 ├── tsconfig.json
 │
+├── prompts/                      ← paste into Copilot/Cursor during recording
+│   ├── ep1.md
+│   ├── ep2.md
+│   ├── ep3.md
+│   ├── ep4.md
+│   └── ep5.md
+│
 ├── scripts/
 │   ├── utils.ts                  ← shared helpers (clients, logging, state)
-│   ├── ep1_edge_function.ts
-│   ├── ep2_rpc.ts
-│   ├── ep3_crud.ts
-│   ├── ep4_rls.ts
-│   ├── ep5_schema_drift.ts
-│   └── reset.ts
+│   ├── ep1_edge_function.ts      ← ep1:run target
+│   ├── ep2_rpc.ts                ← ep2:run target
+│   ├── ep3_crud.ts               ← ep3:run target (also patched by ep3:break)
+│   ├── ep4_rls.ts                ← ep4:run target
+│   ├── ep5_schema_drift.ts       ← ep5:run target
+│   ├── reset.ts                  ← legacy full reset
+│   └── episodes/
+│       ├── _shared/
+│       │   └── patch.ts          ← text-patch helper (applyPatch, swapFile, …)
+│       ├── ep1/
+│       │   ├── break.ts          ← ep1:break
+│       │   └── verify.ts         ← ep1:verify
+│       ├── ep2/
+│       │   ├── break.ts
+│       │   └── verify.ts
+│       ├── ep3/
+│       │   ├── break.ts
+│       │   └── verify.ts
+│       ├── ep4/
+│       │   ├── break.ts
+│       │   └── verify.ts
+│       └── ep5/
+│           ├── break.ts
+│           └── verify.ts
 │
 └── supabase/
     ├── seed.sql
-    ├── types.gen.ts              ← generated; git-ignored until ep5:verify
+    ├── types.gen.ts              ← generated; committed after ep5:verify
+    ├── config.toml
     ├── functions/
     │   ├── echo/
+    │   │   ├── index.ts          ← active (good) version
+    │   │   └── index.broken.ts   ← ep1:break swaps this in
+    │   └── secure-write/
+    │       └── index.ts
+    └── migrations/
+        ├── 20240101000000_create_tables.sql
+        ├── 20240101000001_create_rpc.sql
+        └── 20240101000002_rls_policies.sql
+```
     │   │   ├── index.ts          ← active (good) version
     │   │   ├── index.broken.ts   ← intentional bugs for ep1:break
     │   │   └── index.baseline.ts ← auto-created on first ep1:break run

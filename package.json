@@ -9,31 +9,39 @@
   },
   "scripts": {
     "supabase:start": "supabase start",
-    "supabase:stop": "supabase stop",
+    "supabase:stop":  "supabase stop",
     "supabase:reset": "supabase db reset",
-    "supabase:seed": "supabase db reset && supabase db execute --file supabase/seed.sql",
+    "supabase:seed":  "supabase db reset",
 
-    "ep1:break":  "tsx scripts/ep1_edge_function.ts break",
+    "ep1:reset":  "git checkout -- supabase/functions/echo/index.ts && echo 'EP1 reset: index.ts restored'",
+    "ep1:break":  "tsx scripts/episodes/ep1/break.ts",
     "ep1:run":    "tsx scripts/ep1_edge_function.ts run",
-    "ep1:verify": "tsx scripts/ep1_edge_function.ts verify",
+    "ep1:verify": "tsx scripts/episodes/ep1/verify.ts",
 
-    "ep2:break":  "tsx scripts/ep2_rpc.ts break",
+    "ep2:reset":  "supabase db reset",
+    "ep2:break":  "tsx scripts/episodes/ep2/break.ts",
     "ep2:run":    "tsx scripts/ep2_rpc.ts run",
-    "ep2:verify": "tsx scripts/ep2_rpc.ts verify",
+    "ep2:verify": "tsx scripts/episodes/ep2/verify.ts",
 
-    "ep3:break":  "tsx scripts/ep3_crud.ts break",
+    "ep3:reset":  "git checkout -- scripts/ep3_crud.ts && echo 'EP3 reset: ep3_crud.ts restored'",
+    "ep3:break":  "tsx scripts/episodes/ep3/break.ts",
     "ep3:run":    "tsx scripts/ep3_crud.ts run",
-    "ep3:verify": "tsx scripts/ep3_crud.ts verify",
+    "ep3:verify": "tsx scripts/episodes/ep3/verify.ts",
 
-    "ep4:break":  "tsx scripts/ep4_rls.ts break",
+    "ep4:reset":  "supabase db reset",
+    "ep4:break":  "tsx scripts/episodes/ep4/break.ts",
     "ep4:run":    "tsx scripts/ep4_rls.ts run",
-    "ep4:verify": "tsx scripts/ep4_rls.ts verify",
+    "ep4:verify": "tsx scripts/episodes/ep4/verify.ts",
 
-    "ep5:break":  "tsx scripts/ep5_schema_drift.ts break",
+    "ep5:reset":  "git checkout -- supabase/types.gen.ts 2>/dev/null || true && supabase db execute --local --sql 'alter table public.receipts drop column if exists notes;' && echo 'EP5 reset: column dropped, types restored'",
+    "ep5:break":  "tsx scripts/episodes/ep5/break.ts",
     "ep5:run":    "tsx scripts/ep5_schema_drift.ts run",
-    "ep5:verify": "tsx scripts/ep5_schema_drift.ts verify",
+    "ep5:verify": "tsx scripts/episodes/ep5/verify.ts",
 
-    "reset": "tsx scripts/reset.ts"
+    "reset:code": "git checkout -- . && git clean -fd && echo 'Code reset: all tracked file changes reverted'",
+    "reset:db":   "supabase db reset",
+    "reset:all":  "pnpm reset:code && pnpm reset:db",
+    "reset":      "tsx scripts/reset.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.0"
