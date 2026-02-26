@@ -3,6 +3,9 @@
 A **5-episode video series** repo demonstrating common Supabase debugging scenarios.  
 Each episode has a **reset → break → run → fix → verify** workflow you can execute entirely from the terminal — no dashboard required.
 
+> **Scope**: this repo runs entirely **locally** against a Docker-based Supabase stack — no cloud project or Supabase account required.  
+> The debugging concepts (RLS, RPC errors, schema drift, CRUD footguns, edge function logging) apply equally to cloud projects. See [Adapt to your own project](#adapt-to-your-own-project) for guidance.
+
 ---
 
 ## Episode Recording Loop
@@ -371,6 +374,57 @@ Check version: `supabase --version`.
 
 ### Docker not running
 All local Supabase commands require Docker Desktop to be running.
+
+---
+
+## Adapt to your own project
+
+This repo is intentionally self-contained and local. But the patterns, prompts, and verify scripts are designed to be portable. If you want to apply them to an existing project (local or cloud), here is what maps across:
+
+### Prompts → Cursor / Copilot rules
+
+The files in `prompts/` are standalone — copy any of them into your project as:
+- **Cursor**: `.cursor/rules/supabase-debug.md`
+- **Copilot**: `.github/copilot-instructions.md` (append the relevant sections)
+
+Each prompt is scoped to a single failure mode and tells the AI exactly which file to inspect and which CLI command to run.
+
+### Verify scripts → VS Code tasks
+
+The `scripts/episodes/epN/verify.ts` scripts are plain TypeScript with no playground-specific dependencies.  
+You can copy a verify script alongside your own migration and register it as a VS Code task:
+
+```jsonc
+// .vscode/tasks.json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Supabase: check RLS policies",
+      "type": "shell",
+      "command": "tsx scripts/verify-rls.ts",
+      "group": "test"
+    },
+    {
+      "label": "Supabase: check schema drift",
+      "type": "shell",
+      "command": "supabase gen types typescript --local > supabase/types.gen.ts && echo 'Types regenerated'",
+      "group": "test"
+    }
+  ]
+}
+```
+
+### Cloud projects
+
+The only two differences when targeting a cloud Supabase project:
+
+| Local | Cloud |
+|-------|-------|
+| `supabase db execute --local --sql '...'` | `supabase db execute --sql '...'` (needs `SUPABASE_PROJECT_REF` + `SUPABASE_ACCESS_TOKEN` in env) |
+| `supabase functions serve` | `supabase functions deploy <name>` |
+
+Everything else — the SDK calls, RLS patterns, RPC debugging, type generation — is identical.
 
 ---
 
