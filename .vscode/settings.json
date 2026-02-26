@@ -1,0 +1,14 @@
+{
+  // Use Deno language server for edge function files
+  "deno.enablePaths": ["supabase/functions"],
+  "deno.importMap": "./supabase/functions/deno.json",
+
+  // Prevent the Node TS server from also processing those files
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // Exclude functions dir from Node TS project so there's no conflict
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.preferences.includePackageJsonAutoImports": "on"
+}
