@@ -10,14 +10,13 @@
  *   6. Run `supabase db reset` to re-seed the database
  */
 
-import { copyFileSync, existsSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { c, log, hr, step, ok, fail, warn } from "./utils.js";
 
 const FUNCTIONS_DIR = join(process.cwd(), "supabase", "functions", "echo");
-const GOOD_SRC      = join(FUNCTIONS_DIR, "index.ts");
-const BASELINE_SRC  = join(FUNCTIONS_DIR, "index.baseline.ts");
+const GOOD_SRC      = join(FUNCTIONS_DIR, "index.ts"); // kept for reference in log output
 const STATE_FILE    = join(process.cwd(), ".playground-state.json");
 const TYPES_FILE    = join(process.cwd(), "supabase", "types.gen.ts");
 
@@ -35,14 +34,15 @@ function runSql(sql: string, label: string) {
 }
 
 function resetEchoFunction() {
-  step("File", "Restoring echo/index.ts from baseline");
-  if (existsSync(BASELINE_SRC)) {
-    copyFileSync(BASELINE_SRC, GOOD_SRC);
-    ok("echo/index.ts restored");
-  } else {
+  step("File", "Restoring echo/index.ts via git checkout");
+  try {
+    execSync("git checkout -- supabase/functions/echo/index.ts", { stdio: "inherit" });
+    ok(`echo/index.ts restored to committed version: ${GOOD_SRC}`);
+  } catch (err) {
     warn(
-      "No baseline found at echo/index.baseline.ts.\n" +
-      "  The file will stay as-is. If it looks broken, compare it to index.broken.ts."
+      `git checkout failed — is this a git repo?\n` +
+      `  ${err instanceof Error ? err.message : String(err)}\n` +
+      "  If the function file looks broken, manually compare it to index.broken.ts."
     );
   }
 }

@@ -1,14 +1,24 @@
 node_modules/
 dist/
 .env
-*.env.local
+.env.*
+!.env.example
 
 # Supabase local dev artefacts
 supabase/.branches/
 supabase/.temp/
 
-# Playground state written by break scripts
+# Supabase local project directory (auto-created by `supabase start`; contains JWT secrets)
+.supabase/
+
+# Runtime artefact — auto-created by the legacy reset path; not committed
+supabase/functions/echo/index.baseline.ts
+
+# Playground state written by ep3:break
 .playground-state.json
 
 # macOS
 .DS_Store
+
+# Editor
+*.log

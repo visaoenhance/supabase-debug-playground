@@ -66,7 +66,7 @@ supabase-debug-playground/
 │   ├── ep3_crud.ts               ← ep3:run target (also patched by ep3:break)
 │   ├── ep4_rls.ts                ← ep4:run target
 │   ├── ep5_schema_drift.ts       ← ep5:run target
-│   ├── reset.ts                  ← legacy full reset
+    ├── reset.ts                  ← deep reset (restores files + drops ep5 column + db reset)
 │   └── episodes/
 │       ├── _shared/
 │       │   └── patch.ts          ← text-patch helper (applyPatch, swapFile, …)
@@ -88,24 +88,23 @@ supabase-debug-playground/
 │
 └── supabase/
     ├── seed.sql
-    ├── types.gen.ts              ← generated; committed after ep5:verify
+    ├── types.gen.ts              ← committed baseline (no `notes`); ep5:break overwrites; fix = supabase gen types
     ├── config.toml
     ├── functions/
     │   ├── echo/
     │   │   ├── index.ts          ← active (good) version
     │   │   └── index.broken.ts   ← ep1:break swaps this in
     │   └── secure-write/
-    │       └── index.ts
+    │       └── index.ts          ← bonus reference: server-side service_role insert (not wired to an episode)
     └── migrations/
         ├── 20240101000000_create_tables.sql
         ├── 20240101000001_create_rpc.sql
         └── 20240101000002_rls_policies.sql
 ```
     │   │   ├── index.ts          ← active (good) version
-    │   │   ├── index.broken.ts   ← intentional bugs for ep1:break
-    │   │   └── index.baseline.ts ← auto-created on first ep1:break run
+    │   │   └── index.broken.ts   ← intentional bugs for ep1:break
     │   └── secure-write/
-    │       └── index.ts
+    │       └── index.ts          ← bonus reference: server-side service_role insert (not wired to an episode)
     └── migrations/
         ├── 20240101000000_create_tables.sql
         ├── 20240101000001_create_rpc.sql
@@ -122,6 +121,10 @@ supabase-debug-playground/
 | pnpm | ≥ 9 | `npm i -g pnpm` |
 | Supabase CLI | ≥ 1.200 | `brew install supabase/tap/supabase` |
 | Docker Desktop | any | https://www.docker.com/products/docker-desktop |
+
+> **Windows users**: the `epN:reset` and `ep5:reset` scripts use bash syntax (`2>/dev/null`, `&&`).  
+> Run them inside **Git Bash**, **WSL**, or the Supabase CLI's built-in shell.  
+> PowerShell / CMD are not supported.
 
 ---
 
@@ -279,13 +282,18 @@ CREATE POLICY "receipts: authenticated insert"
 |---------|-------------|
 | `pnpm ep5:break` | Adds `notes TEXT` column to `receipts` in the DB; writes a stale `types.gen.ts` that does NOT include it |
 | `pnpm ep5:run` | Compares live DB columns to columns declared in `types.gen.ts`; reports drift |
-| `pnpm ep5:verify` | Runs `supabase gen types typescript --local`, writes `types.gen.ts`, re-runs drift check |
+| `pnpm ep5:verify` | Re-runs drift check; asserts `notes` is present in `types.gen.ts` |
+
+> **Types contract**: `supabase/types.gen.ts` is **committed** as a baseline (correct schema, no `notes`).  
+> `ep5:break` overwrites it with a stale snapshot. The fix is `supabase gen types typescript --local > supabase/types.gen.ts`.  
+> `ep5:reset` restores the committed baseline via `git checkout`.
 
 **Fix guide**:
 ```bash
 # After any migration that adds/removes/renames columns:
 supabase gen types typescript --local > supabase/types.gen.ts
-# Then commit types.gen.ts alongside the migration SQL
+# Then commit the updated types.gen.ts alongside the migration SQL.
+# This repo commits types.gen.ts so ep5:reset can restore it via git checkout.
 ```
 
 **Expected output (broken)**:
@@ -309,9 +317,12 @@ supabase gen types typescript --local > supabase/types.gen.ts
 |---------|-------------|
 | `pnpm supabase:start` | Start local Supabase stack (runs migrations automatically) |
 | `pnpm supabase:stop` | Stop local Supabase stack |
-| `pnpm supabase:reset` | Reset DB and re-run all migrations |
-| `pnpm supabase:seed` | Reset DB + apply seed.sql |
-| `pnpm reset` | Full playground reset: restores all broken files, clears state, reseeds DB |
+| `pnpm supabase:reset` | Reset DB and re-run all migrations (`supabase db reset`) |
+| `pnpm supabase:seed` | Alias for `supabase:reset` — `db reset` picks up `seed.sql` automatically |
+| `pnpm reset` | **Deep reset** via `scripts/reset.ts`: restores `echo/index.ts`, drops ep5 column, clears `.playground-state.json`, removes stale `types.gen.ts`, then runs `supabase db reset`. Use this to recover from any broken state. |
+| `pnpm reset:code` | Revert all code changes: `git checkout -- . && git clean -fd` |
+| `pnpm reset:db` | Reset database only: `supabase db reset` |
+| `pnpm reset:all` | **Shallow reset**: `reset:code` then `reset:db`. Faster than `pnpm reset` but does not clear playground state files. |
 
 ---
 
