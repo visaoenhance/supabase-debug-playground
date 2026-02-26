@@ -1,42 +1,104 @@
 # EP2 — RPC Debugging
 
-## Context
+## What this episode teaches
 
-I'm recording a Supabase debugging tutorial.  I have a Postgres RPC function
-`create_receipt(title text, amount numeric)` in my local Supabase instance.
-
-I ran `pnpm ep2:break` which applied a broken version of the SQL function to
-the database.
-
-## Symptom
-
-When I call `supabase.rpc('create_receipt', { title: '...', amount: 9.99 })`, 
-I get an error object back:
-
-```
-{
-  code: "42703",
-  message: "column \"titl\" of relation \"receipts\" does not exist",
-  hint: null
-}
-```
-
-## Ask
-
-1. **Root cause**: what does PostgreSQL error code `42703` mean, and what
-   exactly is wrong in the SQL function?
-
-2. **Quick diagnostic**: where in the function body should I look to confirm
-   the typo?  What SQL query can I run to inspect the live function definition?
-
-3. **Minimal fix**: show me only the corrected `INSERT` statement inside the
-   PL/pgSQL function body.
-
-4. **How to verify**: what command do I run after applying the fix to confirm
-   the RPC works and returns a receipt with an `id`?
+- How to read Supabase RPC error objects (`code`, `message`, `hint`) instead of ignoring them
+- How to inspect the live Postgres function definition from the CLI to confirm a typo
+- How `RAISE NOTICE` works as server-side logging visible via `supabase db logs`
 
 ---
 
-> Paste the broken SQL function definition below (get it from
-> `supabase/migrations/20240101000001_create_rpc.sql`), then ask the AI to
-> diagnose and fix it.
+## Recording loop
+
+```bash
+pnpm ep2:reset                                  # restore known-good RPC via supabase db reset
+pnpm ep2:break                                  # inject broken create_receipt (column typo)
+pnpm ep2:run                                    # reproduce the failure — paste output below
+
+# run CLI visibility step (see below)
+
+# apply minimal fix in your IDE (see Ask section)
+
+pnpm ep2:run                                    # confirm error is gone
+pnpm ep2:verify                                 # assert RPC returns a receipt with id + title
+pnpm ep2:reset                                  # clean up for next run
+```
+
+---
+
+## Symptom
+
+```
+▶ RPC  supabase.rpc('create_receipt', { title: '...', amount: 9.99 })
+
+error:
+  code    : 42703
+  message : column "titl" of relation "receipts" does not exist
+  hint    : null
+```
+
+---
+
+## CLI visibility step
+
+Inspect the **live** function definition directly in Postgres:
+
+```bash
+supabase db execute --local --sql \
+  "SELECT pg_get_functiondef('public.create_receipt(text,numeric)'::regprocedure);"
+```
+
+Look at the `INSERT` statement inside the function body — you will see
+`titl` instead of `title`. That's the exact line to fix.
+
+Also tail Postgres RAISE NOTICE output:
+
+```bash
+supabase db logs
+```
+
+---
+
+## Ask
+
+Paste the output of `pg_get_functiondef` above into this chat, then ask:
+
+1. **Root cause**: what does PostgreSQL error code `42703` mean, and what
+   exactly is wrong in the SQL function body?
+
+2. **Quick diagnostic**: which specific line in the `INSERT` statement contains
+   the typo, and how does the error message point directly to it?
+
+3. **Minimal fix**: show only the corrected `INSERT` line inside the
+   PL/pgSQL function body. No other changes needed.
+
+4. **Re-run expectation**: after the fix (apply via `supabase db execute --local`),
+   `pnpm ep2:run` should print:
+   ```
+   ✔  RPC returned data with no error
+   Receipt: { id: "<uuid>", title: "...", amount: 9.99, ... }
+   ```
+
+5. **Verify step**: `pnpm ep2:verify` asserts:
+   - RPC returns no error
+   - Response contains `id` (UUID)
+   - Response contains the `title` we sent
+
+6. **Replay commands**:
+   ```bash
+   pnpm ep2:reset && pnpm ep2:break
+   ```
+
+---
+
+## Paste area
+
+**`pnpm ep2:run` output:**
+```
+(paste here)
+```
+
+**`pg_get_functiondef` output:**
+```sql
+(paste here)
+```

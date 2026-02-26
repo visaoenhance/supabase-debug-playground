@@ -38,6 +38,8 @@
     "ep5:run":    "tsx scripts/ep5_schema_drift.ts run",
     "ep5:verify": "tsx scripts/episodes/ep5/verify.ts",
 
+    "ep:runbook": "tsx scripts/runbook.ts",
+
     "reset:code": "git checkout -- . && git clean -fd && echo 'Code reset: all tracked file changes reverted'",
     "reset:db":   "supabase db reset",
     "reset:all":  "pnpm reset:code && pnpm reset:db",
