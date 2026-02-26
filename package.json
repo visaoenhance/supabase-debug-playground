@@ -1,0 +1,47 @@
+{
+  "name": "supabase-debug-playground",
+  "version": "1.0.0",
+  "description": "5-episode Supabase debugging video series — break, run, fix, verify",
+  "private": true,
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset",
+    "supabase:seed": "supabase db reset && supabase db execute --file supabase/seed.sql",
+
+    "ep1:break":  "tsx scripts/ep1_edge_function.ts break",
+    "ep1:run":    "tsx scripts/ep1_edge_function.ts run",
+    "ep1:verify": "tsx scripts/ep1_edge_function.ts verify",
+
+    "ep2:break":  "tsx scripts/ep2_rpc.ts break",
+    "ep2:run":    "tsx scripts/ep2_rpc.ts run",
+    "ep2:verify": "tsx scripts/ep2_rpc.ts verify",
+
+    "ep3:break":  "tsx scripts/ep3_crud.ts break",
+    "ep3:run":    "tsx scripts/ep3_crud.ts run",
+    "ep3:verify": "tsx scripts/ep3_crud.ts verify",
+
+    "ep4:break":  "tsx scripts/ep4_rls.ts break",
+    "ep4:run":    "tsx scripts/ep4_rls.ts run",
+    "ep4:verify": "tsx scripts/ep4_rls.ts verify",
+
+    "ep5:break":  "tsx scripts/ep5_schema_drift.ts break",
+    "ep5:run":    "tsx scripts/ep5_schema_drift.ts run",
+    "ep5:verify": "tsx scripts/ep5_schema_drift.ts verify",
+
+    "reset": "tsx scripts/reset.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "dotenv": "^16.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
