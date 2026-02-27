@@ -139,17 +139,19 @@ async function main() {
       process.exit(1);
     }
 
-    const keys = await res.json() as Array<{ name: string; api_key: string }>;
-    const anon = keys.find(k => k.name === "anon");
+    const keys = await res.json() as Array<{ name: string; api_key: string }>
+    // Support both legacy key (name: 'anon') and new publishable key (name: 'publishable')
+    const anon = keys.find(k => k.name === "anon") ?? keys.find(k => k.name === "publishable");
 
     if (!anon) {
-      fail("Could not find anon key in API response.");
+      fail("Could not find anon or publishable key in API response.");
       log("  Keys returned: " + keys.map(k => k.name).join(", "));
+      log("  Go to: https://supabase.com/dashboard/project/" + projectRef + "/settings/api-keys");
       process.exit(1);
     }
 
     anonKey = anon.api_key;
-    ok("Anon key fetched");
+    ok(`${anon.name} key fetched (will be used as PROD_SUPABASE_ANON_KEY)`);
   } catch (err) {
     fail(`fetch failed: ${String(err)}`);
     process.exit(1);

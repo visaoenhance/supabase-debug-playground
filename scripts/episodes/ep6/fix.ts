@@ -69,11 +69,11 @@ log("");
 log(c.grey("  Open supabase/functions/echo/index.ts to see inline comments explaining each change."));
 log("");
 
-step("DEPLOY", `supabase functions deploy echo --project-ref ${PROJECT_REF}`);
+step("DEPLOY", `supabase functions deploy echo --no-verify-jwt --project-ref ${PROJECT_REF}`);
 
 try {
   execSync(
-    `supabase functions deploy echo --project-ref ${PROJECT_REF}`,
+    `supabase functions deploy echo --no-verify-jwt --project-ref ${PROJECT_REF}`,
     { stdio: "inherit", env: { ...process.env, SUPABASE_ACCESS_TOKEN: ACCESS_TOKEN } }
   );
   ok("Fixed echo deployed to production");

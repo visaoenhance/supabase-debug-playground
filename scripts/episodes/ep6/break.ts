@@ -77,11 +77,11 @@ log(c.red("  3. No try/catch      → naked 500, no JSON body"));
 log(c.red("  4. No request_id     → untrackable in logs"));
 log("");
 
-step("DEPLOY", `supabase functions deploy echo --project-ref ${PROJECT_REF}`);
+step("DEPLOY", `supabase functions deploy echo --no-verify-jwt --project-ref ${PROJECT_REF}`);
 
 try {
   execSync(
-    `supabase functions deploy echo --project-ref ${PROJECT_REF}`,
+    `supabase functions deploy echo --no-verify-jwt --project-ref ${PROJECT_REF}`,
     { stdio: "inherit", env: { ...process.env, SUPABASE_ACCESS_TOKEN: ACCESS_TOKEN } }
   );
   ok("Broken echo deployed to production");
