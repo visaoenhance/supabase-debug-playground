@@ -24,7 +24,7 @@ The `echo` edge function was fixed in EP1 and works perfectly in local dev. It's
 **Three problems specific to production:**
 1. The function returns HTTP 500 — same bug as EP1, but now in production
 2. The client sees `"Internal Server Error"` — structured error body is missing
-3. Unlike local dev, `supabase functions logs echo` actually works here — this is the CLI path that replaces opening the Dashboard → Edge Functions → Logs tab
+3. Unlike local dev, there's no `supabase functions serve` terminal streaming errors — and no CLI log command either. The **dashboard is the only window** into what went wrong.
 
 **Expected broken output from `pnpm ep6:run`:**
 ```
@@ -33,7 +33,7 @@ Response body: "Internal Server Error"
 request_id  : (missing)
 ```
 
-**Expected `supabase functions logs echo` output (broken):**
+**Expected dashboard log entry (broken):**
 ```
 TypeError: Cannot read properties of undefined (reading 'length')
 ```
@@ -76,11 +76,11 @@ When the user starts this chat, respond with:
 >
 > **The scenario:** In EP1 we fixed the `echo` edge function locally. Now it's deployed — but someone pushed the broken version instead. Users on the real URL are hitting 500s.
 >
-> **The key difference from EP1:** in local dev, errors stream to the `supabase functions serve` terminal. In production, that terminal doesn't exist — but `supabase functions logs` now actually works. This is the CLI path that replaces opening the Supabase Dashboard → Edge Functions → Logs tab manually.
+> **The key difference from EP1:** in local dev, errors stream to the `supabase functions serve` terminal. In production, that terminal doesn't exist — and there's no `supabase functions logs` CLI command either. **The dashboard is the only place to see what went wrong.**
 >
 > **What you'll learn:**
 > - How to deploy an edge function from the CLI: `supabase functions deploy`
-> - How `supabase functions logs <name>` queries production logs without opening a browser
+> - Why the dashboard is currently the only visibility tool for production edge function errors
 > - Why JWT verification is ON by default in production (and how to call the function correctly)
 > - How `request_id` lets you correlate a specific client error to its server log entry
 > - How to confirm a production deploy is correct using `pnpm ep6:verify` — not by eyeballing the dashboard
@@ -109,19 +109,19 @@ After they paste the break output, say:
 When they paste it:
 - Confirm you see HTTP 500 and `"Internal Server Error"` with no `request_id`
 - Point out this is the same symptom as EP1 — but now in production
-- Say: "Same symptom, different environment. Now let's use the CLI to look at the server logs — this time we can actually use `supabase functions logs`. Run this and paste what you see:"
-  ```bash
-  supabase functions logs echo --project-ref $SUPABASE_PROJECT_REF
+- Say: "Same symptom, different environment. In local dev the error would stream to the `supabase functions serve` terminal — but that doesn't exist in production, and there's no CLI log command either. Open the dashboard logs and paste what you see:"
   ```
-  > **Note:** unlike local dev, this command works for deployed functions. This is the terminal equivalent of Dashboard → Edge Functions → echo → Logs.
+  https://supabase.com/dashboard/project/<your-project-ref>/functions/echo/logs
+  ```
+  > **Note:** there is no `supabase functions logs` CLI command. The dashboard is the only place to see production edge function logs.
 
 ---
 
 ### STEP 3 — Read the production logs
 
-When they paste the log:
+When they paste the dashboard log:
 - Identify the `TypeError: Cannot read properties of undefined (reading 'length')`
-- Point out this is identical to EP1's error — but now surfaced via `supabase functions logs` instead of the serve terminal
+- Point out this is identical to EP1's error — but now surfaced via the dashboard instead of the serve terminal
 - Tell them: "The same bug that crashed locally is crashing in production. Let's look at what was deployed. The culprit is in `supabase/functions/echo/index.ts`. Paste its current contents here."
 
 ---
@@ -156,7 +156,7 @@ After any response, show the fix:
 
 When they paste the run output after fixing:
 - Confirm HTTP 200, `ok: true`, and a `request_id` present
-- Note: "Now run `supabase functions logs echo` again — you should see a structured `{ level: 'info', request_id: '...' }` entry instead of a TypeError."
+- Note: "Check the dashboard logs again — you should see a structured `{ level: 'info', request_id: '...' }` entry instead of a TypeError."
 - Say: "That's the fixed production behaviour. Let's make it official:"
   ```bash
   pnpm ep6:verify
@@ -173,7 +173,7 @@ When they paste output showing `✔  EP6 PASSED`:
 >
 > Here's what we reinforced:
 > - `supabase functions deploy` is how edge function code reaches production — a broken local file means a broken deploy
-> - `supabase functions logs <name>` is the CLI equivalent of the Dashboard Logs tab — and the only tool a coding agent can use
+> - There is no `supabase functions logs` CLI command — the dashboard is currently the only way to see production edge function logs
 > - JWT verification is ON in production by default — always send `Authorization: Bearer <anon-key>` from your client
 > - `request_id` minted on every request lets you trace a specific failure from client output to server log — in production, not just locally
 > - `pnpm ep6:verify` asserts correctness against the real URL — this is the pattern for a CI post-deploy health check
@@ -201,8 +201,8 @@ pnpm ep6:break                                  # deploy broken echo to producti
 
 pnpm ep6:run                                    # reproduce the failure — paste output below
 
-# check production logs:
-supabase functions logs echo --project-ref $SUPABASE_PROJECT_REF
+# check production logs (no CLI — use the dashboard):
+# https://supabase.com/dashboard/project/$SUPABASE_PROJECT_REF/functions/echo/logs
 
 # option A (demo / recording): apply pre-built annotated fix + redeploy
 pnpm ep6:fix
@@ -228,12 +228,12 @@ request_id  : (missing)
 
 ---
 
-## CLI visibility step
+## Dashboard visibility step
 
-After `ep6:run` fails, query production function logs from the terminal:
+After `ep6:run` fails, open production function logs in the dashboard:
 
-```bash
-supabase functions logs echo --project-ref $SUPABASE_PROJECT_REF
+```
+https://supabase.com/dashboard/project/$SUPABASE_PROJECT_REF/functions/echo/logs
 ```
 
 You should see:
@@ -242,8 +242,8 @@ TypeError: Cannot read properties of undefined (reading 'length')
 ```
 
 > **Key contrast with EP1:** locally, errors streamed to the `supabase functions serve` terminal.
-> In production, that terminal doesn't exist — `supabase functions logs` is the only CLI path.
-> This is what a coding agent must use to diagnose production edge function failures.
+> In production, that terminal doesn't exist — and there is no `supabase functions logs` CLI command.
+> The dashboard is currently the only way to see production edge function logs.
 
 ---
 

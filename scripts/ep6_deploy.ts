@@ -116,8 +116,8 @@ async function doRun() {
   log(c.bold("What to check:"));
   log("  • Is the status 200?  If not, the deployed function is in broken mode.");
   log("  • Is request_id present in the response body?");
-  log("  • Query production logs:");
-  log(c.cyan(`    supabase functions logs echo --project-ref ${PROJECT_REF ?? "<SUPABASE_PROJECT_REF>"}`));
+  log("  • Query production logs — no CLI command exists yet, use the dashboard:");
+  log(c.cyan(`    https://supabase.com/dashboard/project/${PROJECT_REF ?? "<SUPABASE_PROJECT_REF>"}/functions/echo/logs`));
   log("    Look for:  TypeError / { \"level\": \"error\", ... }");
   log("  • Status 401? The Bearer token is missing or the wrong key was used.");
   hr();
