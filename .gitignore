@@ -20,6 +20,10 @@ supabase/functions/echo/index.ts.pre-ep6-*
 # Playground state written by ep3:break
 .playground-state.json
 
+# Recording setup
+.record
+.npmrc
+
 # macOS
 .DS_Store
 
