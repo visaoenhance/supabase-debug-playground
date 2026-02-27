@@ -274,15 +274,18 @@ async function doRun() {
   if (added.length > 0 || removed.length > 0) {
     log(c.bold(c.red("⚠  Drift detected!")));
     log("");
-    log("What to do:");
-    log("  1. Run: supabase gen types typescript --local > supabase/types.gen.ts");
-    log("  2. Or:  pnpm ep5:verify  (does it automatically)");
-    log("  3. Commit the updated types.gen.ts alongside any migration");
+    log("The fix — one command:");
+    log("");
+    log(c.bold(c.cyan("  supabase gen types typescript --local > supabase/types.gen.ts")));
+    log("");
+    log("  Then commit types.gen.ts alongside any migration that changes the schema.");
+    log("");
+    log(c.grey("  Shortcut: pnpm ep5:fix  (runs the command above automatically)"));
     log("");
     log("Why this matters:");
-    log("  • You can insert a `notes` field in code but TypeScript won't complain");
-    log("  • The value is silently dropped if the type says the column doesn't exist");
-    log("  • Drift grows silently until you hit a runtime mismatch in production");
+    log("  • TypeScript only knows what types.gen.ts says — it can\'t see the live DB");
+    log("  • Drift grows silently: new columns are invisible, removed ones cause runtime errors");
+    log("  • Add this command to CI after every migration to catch drift before it ships");
   } else {
     ok("No drift — types are in sync with the database.");
     log(c.grey("  (Run `pnpm ep5:break` to introduce drift, then re-run.)"));

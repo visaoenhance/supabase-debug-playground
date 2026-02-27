@@ -119,12 +119,16 @@ pnpm epN:reset        # clean up before ending recording
 > **TODO:** EP6 not yet validated end-to-end. Run the full flow before recording:
 > `ep6:reset → ep6:break → ep6:run → ep6:fix → ep6:run → ep6:verify → ep6:reset`
 
-- **Requires a real Supabase project** — add to `.env` before recording:
+- **Requires a real Supabase project** — run this to auto-fill `.env` (only needs project ref + access token):
+  ```bash
+  pnpm setup:ep6:env
+  ```
+  Or add manually:
   ```
   SUPABASE_PROJECT_REF=your-project-ref
   SUPABASE_ACCESS_TOKEN=your-access-token
   PROD_SUPABASE_URL=https://your-project-ref.supabase.co
-  PROD_SUPABASE_ANON_KEY=your-prod-anon-key
+  PROD_SUPABASE_ANON_KEY=your-prod-anon-key   ← fetched automatically by setup:ep6:env
   ```
 - `ep6:break` deploys `index.broken.ts` to production (same bugs as EP1, now live)
 - `ep6:fix` deploys `index.fixed.ts` to production

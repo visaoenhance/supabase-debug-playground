@@ -46,7 +46,10 @@ log(c.green("  2. types.gen.ts now reflects the live DB including the `notes` co
 log(c.green("  3. Schema drift resolved — TypeScript types match database schema"));
 log("");
 
-step("Gen", `supabase gen types typescript --local > ${TYPES_FILE}`);
+step("Gen", "Running type regeneration command");
+log("");
+log(c.bold(c.cyan("  supabase gen types typescript --local > supabase/types.gen.ts")));
+log("");
 
 try {
   // ✅ FIX: regenerate types from the live local Supabase schema

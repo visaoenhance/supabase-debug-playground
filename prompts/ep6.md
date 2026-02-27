@@ -3,7 +3,6 @@
 
 > **TODO (not yet recorded):**
 > - EP6 has not been run end-to-end yet — validate the full break → run → fix → verify → reset flow before recording
-> - EP2–EP5 need `ep:fix` scripts added (parity with EP1/EP6) before this series is considered complete
 > - See RECORDING.md for EP6 pre-flight requirements (real Supabase project + 4 env vars)
 
 ---
@@ -58,6 +57,11 @@ SUPABASE_PROJECT_REF=your-project-ref
 SUPABASE_ACCESS_TOKEN=your-personal-access-token
 PROD_SUPABASE_URL=https://your-project-ref.supabase.co
 PROD_SUPABASE_ANON_KEY=your-prod-anon-key
+```
+
+Run this to fill them in automatically (only needs your project ref + access token):
+```bash
+pnpm setup:ep6:env
 ```
 
 ---

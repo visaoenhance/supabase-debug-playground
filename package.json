@@ -48,6 +48,8 @@
     "ep6:fix":    "tsx scripts/episodes/ep6/fix.ts",
     "ep6:run":    "tsx scripts/ep6_deploy.ts run",
     "ep6:verify": "tsx scripts/episodes/ep6/verify.ts",
+    "ep6:preflight": "tsx scripts/ep6_preflight.ts",
+    "setup:ep6:env": "tsx scripts/setup_ep6_env.ts",
 
     "ep1:prompt": "pbcopy < prompts/ep1.md && echo 'EP1 prompt copied to clipboard — paste into a new chat'",
     "ep2:prompt": "pbcopy < prompts/ep2.md && echo 'EP2 prompt copied to clipboard — paste into a new chat'",
