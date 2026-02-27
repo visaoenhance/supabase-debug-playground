@@ -21,21 +21,25 @@
 
     "ep2:reset":  "supabase db reset",
     "ep2:break":  "tsx scripts/episodes/ep2/break.ts",
+    "ep2:fix":    "tsx scripts/episodes/ep2/fix.ts",
     "ep2:run":    "tsx scripts/ep2_rpc.ts run",
     "ep2:verify": "tsx scripts/episodes/ep2/verify.ts",
 
     "ep3:reset":  "git checkout -- scripts/ep3_crud.ts && echo 'EP3 reset: ep3_crud.ts restored'",
     "ep3:break":  "tsx scripts/episodes/ep3/break.ts",
+    "ep3:fix":    "tsx scripts/episodes/ep3/fix.ts",
     "ep3:run":    "tsx scripts/ep3_crud.ts run",
     "ep3:verify": "tsx scripts/episodes/ep3/verify.ts",
 
     "ep4:reset":  "supabase db reset",
     "ep4:break":  "tsx scripts/episodes/ep4/break.ts",
+    "ep4:fix":    "tsx scripts/episodes/ep4/fix.ts",
     "ep4:run":    "tsx scripts/ep4_rls.ts run",
     "ep4:verify": "tsx scripts/episodes/ep4/verify.ts",
 
     "ep5:reset":  "git checkout -- supabase/types.gen.ts && docker exec supabase_db_supabase-debug-playground psql -U postgres -c 'alter table public.receipts drop column if exists notes;' && echo 'EP5 reset: column dropped, types restored'",
     "ep5:break":  "tsx scripts/episodes/ep5/break.ts",
+    "ep5:fix":    "tsx scripts/episodes/ep5/fix.ts",
     "ep5:run":    "tsx scripts/ep5_schema_drift.ts run",
     "ep5:verify": "tsx scripts/episodes/ep5/verify.ts",
 

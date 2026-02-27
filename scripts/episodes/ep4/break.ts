@@ -50,7 +50,8 @@ try {
 log("");
 log("Next steps:");
 log("  1. pnpm ep4:run  — see anon blocked, service_role succeeds");
-log("  2. Fix: add the INSERT policy back (WITH CHECK (auth.role() = 'authenticated'))");
-log("  3. pnpm ep4:run  — confirm the difference");
-log("  4. pnpm ep4:verify");
+log("  2. Fix: run `pnpm ep4:fix` to re-create the INSERT policy");
+log("     — or apply manually via docker exec psql");
+log("  3. pnpm ep4:run    — confirm the state (anon still blocked — see notes)");
+log("  4. pnpm ep4:verify — see all 3 scenarios");
 hr();

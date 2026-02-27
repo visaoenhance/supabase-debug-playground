@@ -136,13 +136,39 @@ async function doRun() {
   log(`  anon insert     : ${r1.error ? c.red("BLOCKED") : c.green("ALLOWED")}`);
   log(`  service insert  : ${r2.error ? c.red("BLOCKED") : c.green("ALLOWED")}`);
   log("");
+
+  // ── check whether the INSERT policy actually exists right now ───────────────
+  let policyExists = false;
+  try {
+    const result = execSync(
+      `docker exec supabase_db_supabase-debug-playground psql -U postgres -tAc ` +
+      `"SELECT count(*) FROM pg_policies WHERE tablename='receipts' AND policyname='receipts: authenticated insert';"`,
+      { encoding: "utf-8" }
+    ).trim();
+    policyExists = result === "1";
+  } catch { /* ignore — falls back to generic hint */ }
+
   log(c.bold("What to check:"));
-  log("  • anon BLOCKED + service ALLOWED  → RLS is on, but INSERT policy is missing");
-  log("  • Both ALLOWED                     → RLS is off (baseline state)");
-  log("  • Both BLOCKED                     → service_role key may be wrong in .env");
+  if (r1.error && !r2.error) {
+    if (policyExists) {
+      log(c.green("  • INSERT policy is present ✔"));
+      log("  • anon is still blocked  → correct: this test uses an unauthenticated user");
+      log("  • Run `pnpm ep4:verify` to confirm an authenticated user can insert");
+    } else {
+      log(c.yellow("  • anon BLOCKED + service ALLOWED  → RLS is on, INSERT policy is missing"));
+      log("  • Run `pnpm ep4:fix` to re-create the INSERT policy");
+    }
+  } else if (!r1.error && !r2.error) {
+    log("  • Both ALLOWED  → RLS is off (baseline state)");
+  } else if (r1.error && r2.error) {
+    log(c.red("  • Both BLOCKED  → service_role key may be wrong in .env"));
+  }
   log("");
-  log("Fix: Add the INSERT policy:  `WITH CHECK (auth.role() = 'authenticated')`");
-  log("Then run `pnpm ep4:verify` to confirm.");
+  if (!policyExists) {
+    log("Fix: Add the INSERT policy:  `WITH CHECK (auth.role() = 'authenticated')`");
+    log("     or run: pnpm ep4:fix");
+  }
+  log("Then run `pnpm ep4:verify` to confirm all 3 scenarios.");
   hr();
 }
 

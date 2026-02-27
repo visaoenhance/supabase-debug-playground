@@ -108,7 +108,11 @@ After any response, show the fix:
 >   .throwOnError();   // ✔ throws immediately on any DB error
 > ```
 >
-> Update the file, save it, then run:
+> Update the file, save it — or run the pre-built fix:
+> ```bash
+> pnpm ep3:fix   # restores .select() + .throwOnError() automatically
+> ```
+> Then run:
 > ```bash
 > pnpm ep3:run
 > ```
@@ -167,6 +171,7 @@ pnpm ep3:run                                    # reproduce the failure — past
 # run CLI visibility step (see below)
 
 # apply minimal fix in your IDE (see Ask section)
+# — or for pre-built annotated demo: pnpm ep3:fix
 
 pnpm ep3:run                                    # confirm data is no longer null
 pnpm ep3:verify                                 # assert row returned with id + title

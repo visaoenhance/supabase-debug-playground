@@ -62,7 +62,8 @@ try {
 log("");
 log("Next steps:");
 log("  1. pnpm ep2:run  — observe the 42703 error");
-log("  2. Fix the RPC SQL in the migration file");
-  log("  3. Apply the fix:  docker exec supabase_db_supabase-debug-playground psql -U postgres -c '<fixed sql>'  (or supabase db reset)");
-log("  4. pnpm ep2:verify");
+log("  2. Fix the RPC SQL in your IDE (titl → title)");
+log("     — or run `pnpm ep2:fix` for the pre-built annotated fix");
+log("  3. pnpm ep2:run    — confirm error is gone");
+log("  4. pnpm ep2:verify — run pass/fail assertions");
 hr();

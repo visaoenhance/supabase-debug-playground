@@ -121,9 +121,11 @@ After any response, show the fix:
 >
 > You can apply it with:
 > ```bash
+> pnpm ep4:fix   # re-creates the INSERT policy automatically
+> # — or manually —
 > docker exec -i supabase_db_supabase-debug-playground psql -U postgres
 > ```
-> (paste the SQL above as input)
+> (paste the SQL above as input if using the manual path)
 >
 > **Note:** After adding the policy, `pnpm ep4:run` will look identical — anon still blocked, service_role still allowed. That's expected. `ep4:run` uses an unauthenticated session. The policy unlocks *authenticated* users. Run `ep4:run` first to confirm the state, then we'll run `ep4:verify` to see all three scenarios.
 > ```bash
@@ -186,6 +188,7 @@ pnpm ep4:run                                    # reproduce the failure — past
 # run CLI visibility step (see below)
 
 # apply minimal fix in your IDE (see Ask section)
+# — or for pre-built annotated demo: pnpm ep4:fix
 
 pnpm ep4:run                                    # still shows anon BLOCKED — that's correct (see note)
 pnpm ep4:verify                                 # confirms all 3 scenarios: unauthed blocked, authed allowed, service allowed

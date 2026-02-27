@@ -52,8 +52,8 @@ async function goodInsert(title: string, amount: number) {
   const { data, error } = await supabase
     .from("receipts")
     .insert({ title, amount })
-    .select()          // ✔ returns the inserted row(s)
-    .throwOnError();   // ✔ throws immediately on any DB error
+    .select()          // ✅ FIX: returns the inserted row(s) — data will not be null
+    .throwOnError();   // ✅ FIX: throws on any DB error — no more silent failures
 
   return { data, error };
 }

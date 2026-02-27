@@ -104,7 +104,13 @@ After any response, show the fix:
 > insert into public.receipts (title, amount)
 > ```
 >
-> Apply it by running `pnpm ep2:reset` (re-runs migrations, restores the good function), then confirm with:
+> Apply it by running one of:
+> ```bash
+> pnpm ep2:fix     # applies the corrected function directly — fastest path for demos
+> # — or —
+> pnpm ep2:reset   # re-runs all migrations (also restores the good function)
+> ```
+> Then confirm with:
 > ```bash
 > pnpm ep2:run
 > ```
@@ -174,6 +180,7 @@ pnpm ep2:run                                    # reproduce the failure — past
 # run CLI visibility step (see below)
 
 # apply minimal fix in your IDE (see Ask section)
+# — or for pre-built annotated demo: pnpm ep2:fix
 
 pnpm ep2:run                                    # confirm error is gone
 pnpm ep2:verify                                 # assert RPC returns a receipt with id + title

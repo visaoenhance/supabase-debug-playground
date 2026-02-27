@@ -59,8 +59,8 @@ if (status === "already-applied") {
 log("");
 log("Next steps:");
 log("  1. pnpm ep3:run  — see data: null with no error (the confusion)");
-log("  2. Open scripts/ep3_crud.ts in your IDE and find goodInsert");
-log("  3. Add back .select() and .throwOnError()");
-log("  4. pnpm ep3:run  — confirm data now contains a row");
-log("  5. pnpm ep3:verify");
+log("  2. Open scripts/ep3_crud.ts and restore .select() + .throwOnError() in goodInsert");
+log("     — or run `pnpm ep3:fix` for the pre-built annotated fix");
+log("  3. pnpm ep3:run    — confirm data now contains a row");
+log("  4. pnpm ep3:verify");
 hr();

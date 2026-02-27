@@ -110,6 +110,8 @@ After any response, show the fix:
 
 > **The fix — one command:**
 > ```bash
+> pnpm ep5:fix   # regenerates types.gen.ts from the live local schema
+> # — or manually —
 > supabase gen types typescript --local > supabase/types.gen.ts
 > ```
 >
@@ -178,6 +180,7 @@ pnpm ep5:run                                    # reproduce the drift report —
 # run CLI visibility step (see below)
 
 # apply minimal fix (single command — see Ask section)
+# — or for pre-built annotated demo: pnpm ep5:fix
 
 pnpm ep5:run                                    # confirm drift is gone
 pnpm ep5:verify                                 # assert types match live DB + notes present

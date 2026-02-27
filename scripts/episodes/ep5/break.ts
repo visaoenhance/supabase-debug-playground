@@ -118,6 +118,8 @@ log(c.red("  • TypeScript compiles fine but inserting `notes` is invisible to 
 log("");
 log("Next steps:");
 log("  1. pnpm ep5:run  — see the drift report");
-log("  2. Fix: supabase gen types typescript --local > supabase/types.gen.ts");
-log("  3. pnpm ep5:verify");
+log("  2. Fix: run `pnpm ep5:fix` to regenerate types from the live schema");
+log("     — or manually: supabase gen types typescript --local > supabase/types.gen.ts");
+log("  3. pnpm ep5:run    — confirm drift is gone");
+log("  4. pnpm ep5:verify");
 hr();
