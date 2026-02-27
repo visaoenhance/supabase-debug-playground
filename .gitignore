@@ -14,6 +14,9 @@ supabase/.temp/
 # Runtime artefact — auto-created by the legacy reset path; not committed
 supabase/functions/echo/index.baseline.ts
 
+# EP6 break/fix backup files — created at runtime, never committed
+supabase/functions/echo/index.ts.pre-ep6-*
+
 # Playground state written by ep3:break
 .playground-state.json
 
