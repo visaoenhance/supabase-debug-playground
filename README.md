@@ -18,6 +18,8 @@ This repository and its associated skill (`skill/v1.md`) are provided as-is, wit
 
 Always test in a local or isolated environment before applying changes to shared or production systems.
 
+This repository is intended for educational and debugging pattern demonstration purposes only.
+
 ---
 
 ## Episode Recording Loop
