@@ -15,6 +15,7 @@
 
     "ep1:reset":  "git checkout -- supabase/functions/echo/index.ts && echo 'EP1 reset: index.ts restored'",
     "ep1:break":  "tsx scripts/episodes/ep1/break.ts",
+    "ep1:fix":    "tsx scripts/episodes/ep1/fix.ts",
     "ep1:run":    "tsx scripts/ep1_edge_function.ts run",
     "ep1:verify": "tsx scripts/episodes/ep1/verify.ts",
 
@@ -38,11 +39,18 @@
     "ep5:run":    "tsx scripts/ep5_schema_drift.ts run",
     "ep5:verify": "tsx scripts/episodes/ep5/verify.ts",
 
+    "ep6:reset":  "tsx scripts/episodes/ep6/reset.ts",
+    "ep6:break":  "tsx scripts/episodes/ep6/break.ts",
+    "ep6:fix":    "tsx scripts/episodes/ep6/fix.ts",
+    "ep6:run":    "tsx scripts/ep6_deploy.ts run",
+    "ep6:verify": "tsx scripts/episodes/ep6/verify.ts",
+
     "ep1:prompt": "pbcopy < prompts/ep1.md && echo 'EP1 prompt copied to clipboard — paste into a new chat'",
     "ep2:prompt": "pbcopy < prompts/ep2.md && echo 'EP2 prompt copied to clipboard — paste into a new chat'",
     "ep3:prompt": "pbcopy < prompts/ep3.md && echo 'EP3 prompt copied to clipboard — paste into a new chat'",
     "ep4:prompt": "pbcopy < prompts/ep4.md && echo 'EP4 prompt copied to clipboard — paste into a new chat'",
     "ep5:prompt": "pbcopy < prompts/ep5.md && echo 'EP5 prompt copied to clipboard — paste into a new chat'",
+    "ep6:prompt": "pbcopy < prompts/ep6.md && echo 'EP6 prompt copied to clipboard — paste into a new chat'",
 
     "ep:runbook": "tsx scripts/runbook.ts",
 

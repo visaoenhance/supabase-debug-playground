@@ -42,9 +42,10 @@ const RUNBOOKS: Record<number, EpisodeRunbook> = {
       "pnpm ep1:reset          # clean up",
     ],
     visibility: {
-      label: "Tail edge function server logs",
+      label: "Check edge function server logs",
       commands: [
-        "supabase functions logs echo --scroll 20",
+        "# Look at the terminal running: supabase functions serve --no-verify-jwt",
+        "# Runtime errors (TypeError etc.) stream there directly for local dev",
       ],
     },
   },
@@ -218,15 +219,18 @@ function printRunbook(ep: number) {
   hr();
   log(c.grey(`  Prompt file: prompts/ep${ep}.md`));
   log(c.grey(`  Run pnpm ep${ep}:prompt to copy the episode prompt to your clipboard, then paste into a new Cursor/Copilot chat.`));
+  if (ep === 6) {
+    log(c.grey(`  EP6 requires SUPABASE_PROJECT_REF, SUPABASE_ACCESS_TOKEN, PROD_SUPABASE_URL, PROD_SUPABASE_ANON_KEY in .env`));
+  }
   hr();
 }
 
 const raw = process.argv[2];
 const ep  = parseInt(raw ?? "", 10);
 
-if (!raw || isNaN(ep) || ep < 1 || ep > 5) {
-  console.error("Usage: pnpm ep:runbook <1|2|3|4|5>");
-  console.error("Example: pnpm ep:runbook 3");
+if (!raw || isNaN(ep) || ep < 1 || ep > 6) {
+  console.error("Usage: pnpm ep:runbook <1|2|3|4|5|6>");
+  console.error("Example: pnpm ep:runbook 6");
   process.exit(1);
 }
 

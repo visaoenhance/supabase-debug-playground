@@ -43,9 +43,10 @@ pnpm epN:run          # reproduce the failure
                       # ← copy terminal output into prompts/epN.md paste area
                       # ← open prompts/epN.md in Cursor/Copilot
 
-# run CLI visibility step for this episode (see below)
+# CLI visibility: check the supabase functions serve terminal (EP1)
+#                 or run the episode-specific docker/psql command (EP2–EP5)
 
-# apply the minimal fix in the IDE
+# apply the fix: pnpm epN:fix  (demo)  OR  edit the file manually (learning)
 
 pnpm epN:run          # confirm output changed
 
@@ -63,9 +64,10 @@ pnpm epN:reset        # clean up before ending recording
 - Functions server **must** be running before `ep1:run`
 - After `ep1:break`, restart the server so it picks up the broken file:
   `Ctrl-C` → `supabase functions serve --no-verify-jwt`
-- CLI visibility: `supabase functions logs echo --scroll 20`
+- CLI visibility: watch the **`supabase functions serve` terminal** — the TypeError streams there directly. `supabase functions logs` is for remote/hosted functions only and does not work in local dev.
 - The fix lives entirely in `supabase/functions/echo/index.ts`
 - `ep1:reset` uses `git checkout` — no DB changes involved
+- **Framing for recording:** open with the scenario — deployed function returning 500s, users seeing errors. Show "the old way" is clicking Dashboard → Edge Functions → Logs. Then show the terminal flow replaces all of that and is agent-executable.
 
 ### EP2 — RPC Debugging
 
@@ -111,6 +113,26 @@ pnpm epN:reset        # clean up before ending recording
   ```
 - After filming: `git checkout -- supabase/types.gen.ts` to restore committed baseline
 - `ep5:verify` checks STALE marker absent + live columns match type declarations
+
+### EP6 — Local to Production
+
+> **TODO:** EP6 not yet validated end-to-end. Run the full flow before recording:
+> `ep6:reset → ep6:break → ep6:run → ep6:fix → ep6:run → ep6:verify → ep6:reset`
+
+- **Requires a real Supabase project** — add to `.env` before recording:
+  ```
+  SUPABASE_PROJECT_REF=your-project-ref
+  SUPABASE_ACCESS_TOKEN=your-access-token
+  PROD_SUPABASE_URL=https://your-project-ref.supabase.co
+  PROD_SUPABASE_ANON_KEY=your-prod-anon-key
+  ```
+- `ep6:break` deploys `index.broken.ts` to production (same bugs as EP1, now live)
+- `ep6:fix` deploys `index.fixed.ts` to production
+- `ep6:reset` runs `git checkout` on index.ts then redeploys the known-good version
+- CLI visibility: `supabase functions logs echo --project-ref $SUPABASE_PROJECT_REF`
+  This is the command that WORKS for deployed functions (unlike local dev where you need the serve terminal)
+- `ep6:run` and `ep6:verify` call `PROD_SUPABASE_URL` with `Authorization: Bearer <PROD_SUPABASE_ANON_KEY>`
+- **Framing for recording:** contrast EP1 (local, no dashboard visibility) with EP6 (production, `supabase functions logs` works, same terminal-only pattern applies). Show that a coding agent operates identically in both environments.
 
 ---
 

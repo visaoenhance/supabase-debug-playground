@@ -41,8 +41,8 @@ if (status === "already-applied") {
 log("");
 log("Next steps:");
 log("  1. Restart the function server (Ctrl-C & re-run `supabase functions serve --no-verify-jwt`)");
-log("  2. pnpm ep1:run  — see the failure");
-log("  3. Fix index.ts in your IDE");
-log("  4. pnpm ep1:run  — confirm it passes");
+log("  2. pnpm ep1:run    — see the failure");
+log("  3. Fix index.ts in your IDE  (or run `pnpm ep1:fix` for the pre-built annotated fix)");
+log("  4. pnpm ep1:run    — confirm it passes");
 log("  5. pnpm ep1:verify");
 hr();

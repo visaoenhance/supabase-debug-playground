@@ -53,12 +53,17 @@ When the user starts this chat, respond with:
 
 > **Episode 1 of 5 — Edge Function Logging**
 >
-> We're debugging an opaque HTTP 500 from a Supabase edge function. The client gets an empty response with no error message and no way to trace it. By the end of this episode you'll know exactly how to make edge function errors visible — on both the client and the server.
+> **The scenario:** your `echo` edge function is deployed and returning HTTP 500s. Users are seeing errors. No message, no body, nothing to act on.
+>
+> **The usual workflow:** open the Supabase Dashboard → Edge Functions → click the function → open the Logs tab → scroll to find the error. That's 3–5 minutes of manual clicking every time, and a coding agent can't do it at all.
+>
+> **What we'll do instead:** reproduce, diagnose, fix, and verify entirely from the terminal — the same way a coding agent (Copilot, Cursor, Claude Code) would need to operate. By the end of this episode you'll have a repeatable command-line pattern that replaces the dashboard workflow and that an agent can run autonomously.
 >
 > **What you'll learn:**
 > - Why unguarded env vars produce silent crashes in Deno
 > - Why missing `try/catch` makes edge function errors invisible to the client
 > - How to wire a `request_id` so every error is traceable from client to server log
+> - How to confirm a fix is correct using `verify` — not by eyeballing the dashboard
 >
 > **Before we start:** make sure your functions server is running in a separate terminal:
 > ```bash
@@ -86,10 +91,9 @@ After they paste the break output, say:
 
 When they paste it:
 - Confirm you see HTTP 500 and an empty body and no request_id
-- Say: "That's the symptom — an empty 500 with nothing to debug. Now let's look at the server side. Run this and paste what you see:"
-  ```bash
-  supabase functions logs echo --scroll 20
-  ```
+- Say: "That's the symptom — an empty 500 with nothing to debug. Now let's look at the server side. Switch to the terminal where `supabase functions serve` is running and paste the last few lines of output here."
+
+> **Local dev note:** For local functions, the runtime logs stream directly to the `supabase functions serve` terminal — there is no separate `supabase functions logs` command for local dev. Look there for the TypeError.
 
 ---
 
@@ -133,7 +137,7 @@ After any response, show the full fix:
 > }
 > ```
 >
-> Apply these to `supabase/functions/echo/index.ts`, save, then run:
+> Apply these to `supabase/functions/echo/index.ts` and save — or run `pnpm ep1:fix` to apply a pre-built annotated version that comments each change inline. Then run:
 > ```bash
 > pnpm ep1:run
 > ```
@@ -191,9 +195,12 @@ pnpm ep1:reset                                  # restore known-good index.ts
 pnpm ep1:break                                  # inject broken version
 pnpm ep1:run                                    # reproduce the failure — paste output below
 
-# run CLI visibility step (see below)
+# check supabase functions serve terminal for the TypeError
 
-# apply minimal fix in your IDE (see Ask section)
+# option A (demo / recording): apply the pre-built annotated fix
+pnpm ep1:fix                                    # overwrites index.ts with commented fix
+
+# option B (learning): hand-edit supabase/functions/echo/index.ts yourself
 
 pnpm ep1:run                                    # confirm output changed
 pnpm ep1:verify                                 # assert HTTP 200 + request_id present
@@ -215,18 +222,16 @@ request_id  : (missing)
 
 ## CLI visibility step
 
-Check the function's server-side logs immediately after `ep1:run` fails:
+Check the function's server-side logs immediately after `ep1:run` fails by switching to the terminal where `supabase functions serve` is running.
 
-```bash
-supabase functions logs echo --scroll 20
-```
-
-You should see an uncaught `TypeError: Cannot read properties of undefined`
+You should see an uncaught `TypeError: Cannot read properties of undefined (reading 'length')`
 with no structured context around it — no `request_id`, no payload.
 That confirms the crash happens before any logging runs.
 
-> **Local note**: `supabase functions logs` tails the output from
-> `supabase functions serve`. Keep that process running in a separate terminal.
+> **Local note**: For local development, runtime logs stream directly to the
+> `supabase functions serve` terminal. `supabase functions logs` is for
+> remote/hosted functions only and does not work with local dev. Keep the
+> serve process running in a separate terminal and read logs there.
 
 ---
 
@@ -272,7 +277,7 @@ Paste `supabase/functions/echo/index.ts` into this chat, then ask:
 (paste here)
 ```
 
-**`supabase functions logs echo --scroll 20` output:**
+**`supabase functions serve` terminal output (after running `ep1:run`):**
 ```
 (paste here)
 ```

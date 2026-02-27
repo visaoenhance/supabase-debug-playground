@@ -163,8 +163,8 @@ async function doRun() {
   log(c.bold("What to check:"));
   log("  • Is the status 200?  If not, the function is in broken mode.");
   log("  • Is request_id present in the response body?");
-  log("  • Run: supabase functions logs echo --scroll 20");
-  log('    and look for  { "level": "info", "request_id": "..." }');
+  log("  • Check the terminal where `supabase functions serve` is running");
+  log('    and look for  TypeError / { "level": "error", ... } in that output.');
   hr();
 }
 

@@ -22,3 +22,6 @@ supabase/functions/echo/index.baseline.ts
 
 # Editor
 *.log
+
+# Local planning docs — not for public repo
+docs/
