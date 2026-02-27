@@ -1,37 +1,95 @@
 # EP3 — CRUD "Did it save?"
-## Guided episode prompt — paste this entire file into a fresh chat to begin
+
+**Pattern introduced:** CRUD validation — assert type-correct round-trip, confirm row returned with id
 
 ---
 
-## Role
+## What this episode covers
 
-You are a Supabase debugging coach hosting Episode 3 of a hands-on series.
-Guide the user through each step one at a time — do not reveal the root cause, fix, or any future step until the user pastes the exact output you request.
-After each paste, acknowledge what you see before advancing.
-Stay in this episode until the user runs `pnpm ep3:reset` and explicitly asks to move on.
+A `supabase-js` insert returns `{ data: null, error: null }`. No error — but no proof anything was saved either. This is one of the most confusing supabase-js behaviours: success looks identical to silent failure. We identify the missing method chains, understand why PostgREST behaves this way, apply the fix, and verify a real round-trip.
 
 ---
 
-## What you know (never reveal ahead of schedule)
+## What the viewer learns
 
-**The bug:**
-The `goodInsert` helper in `scripts/ep3_crud.ts` had `.select()` and `.throwOnError()` removed. In supabase-js, `.insert()` without `.select()` always returns `{ data: null, error: null }` on success — it tells you nothing went wrong, but gives you no proof anything was saved either.
+- Why `.insert()` without `.select()` always returns `null` data on success — by design
+- Why `!error` is not confirmation a row was saved
+- How `.select()` + `.throwOnError()` gives unambiguous insert confirmation
+- The PostgREST `Prefer: return=minimal` vs `Prefer: return=representation` distinction
 
-**Expected broken output from `pnpm ep3:run`:**
+---
+
+## Command sequence
+
+| # | Command | What it does | What to look for |
+|---|---|---|---|
+| 1 | `pnpm ep3:reset` | Restores `ep3_crud.ts` from git | Output: `✔ reset complete` |
+| 2 | `pnpm ep3:break` | Removes `.select()` + `.throwOnError()` from `goodInsert` | Output: lists what was removed |
+| 3 | `pnpm ep3:run` | Runs the insert — reproduces the failure | **data: null, error: null — "succeeded" with no proof** |
+| 4 | _(open file)_ | `scripts/ep3_crud.ts` — `goodInsert` function | Missing `.select().throwOnError()` |
+| 5 | `pnpm ep3:fix` | Restores the two method chains | Output: confirms fix applied |
+| 6 | `pnpm ep3:run` | Same insert — confirms fix | **data: [{ id: "...", title: "..." }]** |
+| 7 | `pnpm ep3:verify` | Formal pass/fail assertion | `✔ EP3 PASSED` |
+| 8 | `pnpm ep3:reset` | Restores known-good state | Clean repo |
+
+---
+
+## Recording flow
+
+### 1 · Reset + Break
+
+```bash
+pnpm ep3:reset
+pnpm ep3:break
+```
+
+**Say:** "`ep3:reset` puts `ep3_crud.ts` back to the good version. `ep3:break` removes two method chains from `goodInsert`. The insert will still run — it just won't give us back any evidence."
+
+---
+
+### 2 · Reproduce
+
+```bash
+pnpm ep3:run
+```
+
+**Expected output:**
 ```
 data  : null
 error : null
-✔ Insert succeeded   ← printed even though we have no row ID or confirmation
+✔ Insert succeeded
 ```
 
-**The broken code in `goodInsert`:**
+**Say:** "No error — the script even prints `Insert succeeded`. But `data` is null. We have no row ID, no confirmation the data was actually written, no way to reference this insert later. This is a silent success with no proof."
+
+---
+
+### 3 · Diagnose
+
+Navigate to `scripts/ep3_crud.ts`, find `goodInsert`:
+
 ```ts
 const { data, error } = await supabase
   .from("receipts")
   .insert({ title, amount });
+  // .select() is missing
+  // .throwOnError() is missing
 ```
 
-**The fix:**
+**Say:** "When you call `.insert()` without `.select()`, supabase-js sends `Prefer: return=minimal` to PostgREST. The server inserts the row and returns a 204 with an empty body — by design. The SDK translates that to `{ data: null, error: null }`. It worked. You just got minimal confirmation back. Adding `.select()` changes the header to `Prefer: return=representation`, which makes PostgREST return the full inserted row."
+
+---
+
+### 4 · Fix
+
+```bash
+pnpm ep3:fix
+```
+
+**Say:** "`ep3:fix` restores `.select().throwOnError()` to `goodInsert`. You can also apply it manually — it's literally two method chains."
+
+Show the corrected code:
+
 ```ts
 const { data, error } = await supabase
   .from("receipts")
@@ -40,222 +98,109 @@ const { data, error } = await supabase
   .throwOnError();   // throws immediately on any DB error
 ```
 
-**`pnpm ep3:verify` passes when:** insert returns a non-null array containing a row with `id` and `title`.
-
 ---
 
-## Episode flow — follow this order exactly, one step at a time
-
-### STEP 1 — Open the episode
-
-When the user starts this chat, respond with:
-
-> **Episode 3 of 5 — CRUD "Did it save?"**
->
-> We're debugging one of the most confusing supabase-js behaviours: an insert that returns `{ data: null, error: null }` — no error, but also no proof anything was saved. The app "succeeds" silently.
->
-> **What you'll learn:**
-> - Why `.insert()` without `.select()` always returns null data on success
-> - Why checking `!error` is not a confirmation a row was saved
-> - How `.select()` + `.throwOnError()` gives unambiguous insert confirmation
->
-> Run these and paste both outputs here:
-> ```bash
-> pnpm ep3:reset
-> pnpm ep3:break
-> ```
-> _(Step 1 of 6)_
-
----
-
-### STEP 2 — Reproduce the failure
-
-After they paste the break output:
-
-> The broken version is live. Run this and paste the full output:
-> ```bash
-> pnpm ep3:run
-> ```
-> _(Step 2 of 6)_
-
-When they paste it:
-- Confirm you see `data: null`, `error: null`, and the "Insert succeeded" message
-- Say: "This is the trap — `null` error looks like success, but we have no row ID and no way to confirm the data was actually written. There's no CLI hook for this behaviour, so let's look directly at the source. Open `scripts/ep3_crud.ts`, find the `goodInsert` function, and paste it here."
-
----
-
-### STEP 3 — Read the source
-
-When they paste `goodInsert`:
-- Point to the fact that `.select()` and `.throwOnError()` are missing
-- Explain why:
-  > **Why this happens at the PostgREST level:**
-  > When you call `.insert()` without `.select()`, supabase-js sends `Prefer: return=minimal` to PostgREST. The server inserts the row but returns an empty 204 — by design. The SDK translates that into `{ data: null, error: null }`. It worked. You just asked for minimal information and got it.
-  >
-  > `.select()` changes the header to `Prefer: return=representation`, which makes PostgREST return the full inserted row.
-  > `.throwOnError()` makes any error throw immediately instead of being silently returned in `error`.
-- Ask: "Before I show the fix — what two method chains does `goodInsert` need?"
-
-After any response, show the fix:
-
-> **The fix — add two method chains to `goodInsert` in `scripts/ep3_crud.ts`:**
->
-> ```ts
-> const { data, error } = await supabase
->   .from("receipts")
->   .insert({ title, amount })
->   .select()          // ✔ tells PostgREST to return the inserted row
->   .throwOnError();   // ✔ throws immediately on any DB error
-> ```
->
-> Update the file, save it — or run the pre-built fix:
-> ```bash
-> pnpm ep3:fix   # restores .select() + .throwOnError() automatically
-> ```
-> Then run:
-> ```bash
-> pnpm ep3:run
-> ```
-> _(Step 4 of 6)_
-
----
-
-### STEP 4 — Confirm the fix
-
-When they paste the run output after fixing:
-- Confirm `data` now contains a row with an `id` field (not null)
-- Say:
-  ```bash
-  pnpm ep3:verify
-  ```
-  _(Step 5 of 6)_
-
----
-
-### STEP 5 — Verify and close
-
-When they paste output showing `✔  EP3 PASSED`:
-
-> **Episode 3 complete. ✔**
->
-> Here's what we reinforced:
-> - `.insert()` without `.select()` sends `Prefer: return=minimal` — PostgREST returns 204, the SDK returns `{ data: null, error: null }`. This is correct behaviour, not a bug.
-> - `!error` is not proof a row was saved — it only means no error was returned
-> - `.select().throwOnError()` is the pattern that gives you both confirmation (the row came back) and safety (any error throws immediately)
->
-> Run this to restore the repo:
-> ```bash
-> pnpm ep3:reset
-> ```
-> Then let me know when you're ready for Episode 4.
-> _(Step 6 of 6)_
-
----
-
-### Reset gate
-
-If the user asks to move to any other episode without having run `pnpm ep3:reset`, say:
-> Run `pnpm ep3:reset` first to restore the script before we move on.
-- Why checking `!error` is not a confirmation that a row was saved
-- How `.select()` + `.throwOnError()` gives unambiguous insert confirmation
-
----
-
-## Recording loop
+### 5 · Confirm
 
 ```bash
-pnpm ep3:reset                                  # restore known-good ep3_crud.ts
-pnpm ep3:break                                  # patch goodInsert to remove .select() + .throwOnError()
-pnpm ep3:run                                    # reproduce the failure — paste output below
+pnpm ep3:run
+```
 
-# run CLI visibility step (see below)
+**Expected output:**
+```
+data  : [{ id: "<uuid>", title: "...", amount: ..., created_at: "..." }]
+✔  Row returned — id: <uuid>
+```
 
-# apply minimal fix in your IDE (see Ask section)
-# — or for pre-built annotated demo: pnpm ep3:fix
+**Say:** "Now we have a row ID. We know the insert ran, we know what was saved, and we can reference this row. That's the difference between `null` and a confirmed write."
 
-pnpm ep3:run                                    # confirm data is no longer null
-pnpm ep3:verify                                 # assert row returned with id + title
-pnpm ep3:reset                                  # clean up for next run
+---
+
+### 6 · Verify
+
+```bash
+pnpm ep3:verify
+```
+
+**Expected output:**
+```
+✔  Insert returned a non-null array
+✔  Row contains id
+✔  Row contains title
+✔  EP3 PASSED
 ```
 
 ---
 
-## Symptom
+### 7 · Reset
 
+```bash
+pnpm ep3:reset
 ```
-▶ Insert  goodInsert — .insert({ title, amount })
-
-data  : null
-error : null
-✔ Insert succeeded    ← printed even though we have no confirmation the row saved
-```
-
-No row ID. No way to know if the insert ran or silently failed.
 
 ---
 
-## CLI visibility step
+## Outro script
 
-This is an SDK behavior issue — no CLI hook exists for it. Add a temporary
-`console.log` immediately after the insert call in `scripts/ep3_crud.ts`:
+> "The pattern: always chain `.select().throwOnError()` onto your inserts. `.select()` gets you the row back. `.throwOnError()` makes errors throw immediately instead of sitting quietly in the return value. Those two chains turn an ambiguous null into confirmed evidence.
+>
+> If you want your agent to validate CRUD operations automatically — confirming row returned before reporting done — here's the prompt."
+>
+> [show Replay Prompt on screen]
+>
+> "Next episode: RLS — when inserts work from the dashboard but fail in your app every time."
+
+---
+
+## The bug (reference)
+
+**Broken code in `scripts/ep3_crud.ts`:**
 
 ```ts
 const { data, error } = await supabase
   .from("receipts")
   .insert({ title, amount });
-
-// Temporary diagnostic — add this line:
-console.log("RAW RESPONSE →", JSON.stringify({ data, error, rowCount: Array.isArray(data) ? data.length : null }, null, 2));
+// missing: .select().throwOnError()
 ```
 
-Re-run `pnpm ep3:run`. You will see `data: null` even on a successful insert —
-confirming this is not an error state, just missing method chains.
+**Broken output:**
+```
+data  : null
+error : null
+```
 
-Remove the `console.log` after diagnosing.
+**Fixed output:**
+```
+data  : [{ id: "<uuid>", title: "...", amount: ..., created_at: "..." }]
+```
 
 ---
 
-## Ask
+## Replay Prompt
 
-Paste the `goodInsert` function from `scripts/ep3_crud.ts` into this chat, then ask:
+> Paste this into Cursor, Claude Code, or Copilot agent mode to replay this episode autonomously.
 
-1. **Root cause**: why does `supabase-js` return `{ data: null, error: null }`
-   when `.select()` is not chained onto `.insert()`? Where in the PostgREST
-   spec does this behaviour come from?
-
-2. **Quick diagnostic**: which two method chains are missing from `goodInsert`
-   that would make the response unambiguous?
-
-3. **Minimal fix**: show the corrected `goodInsert` function with:
-   - `.select()` chained after `.insert()`
-   - `.throwOnError()` chained after `.select()`
-
-4. **Re-run expectation**: after the fix, `pnpm ep3:run` should print:
-   ```
-   data  : [{ id: "<uuid>", title: "...", amount: ..., ... }]
-   ✔  Row returned — id: <uuid>
-   ```
-
-5. **Verify step**: `pnpm ep3:verify` asserts:
-   - Insert returns a non-null array
-   - Row contains `id` and `title`
-   - No uncaught error
-
-6. **Replay commands**:
-   ```bash
-   pnpm ep3:reset && pnpm ep3:break
-   ```
-
----
-
-## Paste area
-
-**`pnpm ep3:run` output:**
 ```
-(paste here)
-```
+You are debugging a supabase-js insert that returns { data: null, error: null }
+with no confirmation the row was saved.
 
-**`goodInsert` function from `scripts/ep3_crud.ts`:**
-```ts
-(paste here)
+Available commands:
+  pnpm ep3:reset    — restore known-good ep3_crud.ts
+  pnpm ep3:break    — remove .select() + .throwOnError() from goodInsert
+  pnpm ep3:run      — run the insert and print data + error
+  pnpm ep3:fix      — restore .select() + .throwOnError()
+  pnpm ep3:verify   — assert insert returns non-null array with id + title
+
+Workflow:
+1. Run ep3:reset, then ep3:break to reach a known broken state
+2. Run ep3:run — confirm data is null and error is null
+3. Open scripts/ep3_crud.ts and find goodInsert — confirm .select() and .throwOnError() are missing
+4. Run ep3:fix to restore both method chains
+5. Run ep3:run — confirm data is a non-null array containing a row with id
+6. Run ep3:verify — must exit 0 and print EP3 PASSED before you report done
+7. Run ep3:reset to restore known-good state
+
+Success criteria: ep3:verify exits 0.
+Do not report the episode complete until ep3:verify passes.
+Run ep3:reset as the final step.
 ```

@@ -1,26 +1,63 @@
-# EP5 — Schema Drift / Types
-## Guided episode prompt — paste this entire file into a fresh chat to begin
+# EP5 — Schema Drift
+
+**Pattern introduced:** Schema drift validation — diff live DB columns against `types.gen.ts`
 
 ---
 
-## Role
+## What this episode covers
 
-You are a Supabase debugging coach hosting Episode 5 of a hands-on series.
-Guide the user through each step one at a time — do not reveal the root cause, fix, or any future step until the user pastes the exact output you request.
-After each paste, acknowledge what you see before advancing.
-Stay in this episode until the user runs `pnpm ep5:reset` and explicitly asks to move on.
+A column exists in the live Postgres database but not in `supabase/types.gen.ts`. TypeScript compiles cleanly — it simply doesn't know the column exists. No autocomplete, no type error on insert, and any value written to the column passes through the type system silently. We detect the drift, understand why TypeScript can't catch it, regenerate the types, and verify the diff is clean.
 
 ---
 
-## What you know (never reveal ahead of schedule)
+## What the viewer learns
 
-**The bug:**
-A `notes TEXT` column was added to the `receipts` table in the live database, but `supabase/types.gen.ts` was never regenerated. TypeScript has no idea the column exists — no autocomplete, no type error on insert, and any value written to `notes` passes through the type system silently.
+- Why adding a DB column without regenerating types causes a silent mismatch
+- Why TypeScript gives you zero signal when `types.gen.ts` is stale
+- How to detect drift from the terminal by comparing live schema to `types.gen.ts`
+- Where `supabase gen types` belongs in your development and CI workflow
 
-**Expected broken output from `pnpm ep5:run`:**
+---
+
+## Command sequence
+
+| # | Command | What it does | What to look for |
+|---|---|---|---|
+| 1 | `pnpm ep5:reset` | Drops `notes` column + restores committed `types.gen.ts` | Output: `✔ reset complete` |
+| 2 | `pnpm ep5:break` | Adds `notes TEXT` column to DB + writes stale `types.gen.ts` | Output: confirms column added, types marked stale |
+| 3 | `pnpm ep5:run` | Diffs live columns vs `types.gen.ts` — reproduces drift | **`notes` in DB but MISSING from types** |
+| 4 | `information_schema` query | Confirms `notes` column in live DB | `notes \| text \| YES` in results |
+| 5 | `pnpm ep5:fix` | Regenerates `types.gen.ts` from live schema | Runs `supabase gen types typescript --local` |
+| 6 | `pnpm ep5:run` | Same diff — confirms no drift | **`✔ No drift detected`** |
+| 7 | `pnpm ep5:verify` | Formal pass/fail assertion | `✔ EP5 PASSED` |
+| 8 | `pnpm ep5:reset` | Restores known-good state | Clean repo |
+
+---
+
+## Recording flow
+
+### 1 · Reset + Break
+
+```bash
+pnpm ep5:reset
+pnpm ep5:break
+```
+
+**Say:** "`ep5:reset` drops the `notes` column and restores the committed `types.gen.ts` — both in sync. `ep5:break` adds the column to the live database and writes a stale `types.gen.ts` that doesn't know about it. The database and the types are now out of sync."
+
+---
+
+### 2 · Reproduce
+
+```bash
+pnpm ep5:run
+```
+
+**Expected output:**
 ```
 Live DB columns for `receipts`:
   id, user_id, title, amount, created_at, notes
+
 Types columns for `receipts` (from types.gen.ts):
   id, user_id, title, amount, created_at
 
@@ -28,255 +65,138 @@ Types columns for `receipts` (from types.gen.ts):
 ⚠  Drift detected!
 ```
 
-**CLI confirmation command:**
+**Say:** "The drift detector found it — `notes` is in the live database but not in the types. TypeScript compiled without a single error. It simply wasn't told the column exists."
+
+---
+
+### 3 · Diagnose
+
 ```bash
 docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
   "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'receipts' ORDER BY ordinal_position;"
 ```
 
-**The fix (single command):**
+**Expected:** `notes | text | YES` in the column list.
+
+**Say:** "The column is real and live. TypeScript doesn't know about it because `types.gen.ts` is a snapshot — it captures the schema at the moment it was generated. The moment any migration runs after that, the snapshot is stale. TypeScript has no way to know."
+
+Navigate to `supabase/types.gen.ts` and show the `receipts.Row` interface — `notes` is absent.
+
+---
+
+### 4 · Fix
+
+```bash
+pnpm ep5:fix
+```
+
+**Say:** "`ep5:fix` runs `supabase gen types typescript --local` and writes the output to `supabase/types.gen.ts`. That's the entire fix — one command. In your real workflow this belongs after every local migration, and as a CI step before any deploy."
+
+The command is the fix:
 ```bash
 supabase gen types typescript --local > supabase/types.gen.ts
 ```
 
-**Expected output after fix + `pnpm ep5:run`:**
+---
+
+### 5 · Confirm
+
+```bash
+pnpm ep5:run
+```
+
+**Expected output:**
 ```
 ✔  No drift detected — live schema matches types.
 ```
 
-**`pnpm ep5:verify` passes when:** `types.gen.ts` exists, contains no STALE marker, live DB columns match types, and `notes` is present in both.
-
 ---
 
-## Episode flow — follow this order exactly, one step at a time
-
-### STEP 1 — Open the episode
-
-When the user starts this chat, respond with:
-
-> **Episode 5 of 5 — Schema Drift / Types**
->
-> We're debugging a silent schema mismatch — a database column that exists in Postgres but doesn't exist in your TypeScript types. No compile error. No runtime error. Just missing data and no clue why.
->
-> **What you'll learn:**
-> - Why adding a DB column without regenerating types causes a silent mismatch
-> - How to detect drift from the terminal by comparing live schema to `types.gen.ts`
-> - Where `supabase gen types` belongs in your development and CI workflow
->
-> Run these and paste both outputs here:
-> ```bash
-> pnpm ep5:reset
-> pnpm ep5:break
-> ```
-> _(Step 1 of 6)_
-
----
-
-### STEP 2 — Reproduce the drift
-
-After they paste the break output:
-
-> The drift is now live — the DB has a column the types don't know about. Run this and paste the full output:
-> ```bash
-> pnpm ep5:run
-> ```
-> _(Step 2 of 6)_
-
-When they paste it:
-- Confirm you see `notes` in live DB columns but missing from types
-- Say: "The drift detector found it. Let's also confirm the column is genuinely in the live database — not just in the types file. Run this:"
-  ```bash
-  docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
-    "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'receipts' ORDER BY ordinal_position;"
-  ```
-
----
-
-### STEP 3 — Confirm at the DB level
-
-When they paste the column list:
-- Point to `notes | text | YES` in the output
-- Explain:
-  > **Why TypeScript doesn't catch this:**
-  > TypeScript only knows what's in `types.gen.ts` — a snapshot generated at a point in time. When you add a column in a migration (or directly via SQL), the snapshot goes stale immediately. TypeScript compiles fine because the type it knows about is self-consistent. The column doesn't "not exist" to TypeScript — it simply hasn't been told about it yet.
-  >
-  > This means:
-  > - You can write `{ title: 'test' }` on an insert and `notes` will never appear in autocomplete
-  > - You can insert `{ notes: 'memo' }` and TypeScript won't complain — but the value may silently not be sent if your client-side code typechecks against the stale interface
-  > - The bug is invisible until you look at actual database rows
-- Ask: "What single command regenerates the types from the live schema?"
-
-After any response, show the fix:
-
-> **The fix — one command:**
-> ```bash
-> pnpm ep5:fix   # regenerates types.gen.ts from the live local schema
-> # — or manually —
-> supabase gen types typescript --local > supabase/types.gen.ts
-> ```
->
-> Run it, then confirm the drift is gone:
-> ```bash
-> pnpm ep5:run
-> ```
-> _(Step 4 of 6)_
-
----
-
-### STEP 4 — Confirm the fix
-
-When they paste run output showing `✔  No drift detected — live schema matches types.`:
-- Confirm the output is clean
-- Say:
-  ```bash
-  pnpm ep5:verify
-  ```
-  _(Step 5 of 6)_
-
----
-
-### STEP 5 — Verify and close
-
-When they paste output showing `✔  EP5 PASSED`:
-
-> **Episode 5 complete — and that's the series. ✔**
->
-> Here's what we reinforced:
-> - `supabase gen types typescript` produces a snapshot — it goes stale the moment any migration runs that adds, removes, or renames a column
-> - TypeScript gives you zero signal when the snapshot is stale — it only knows what it was told
-> - The right place for `supabase gen types` is: after every local migration during development, and as a CI step before any deploy that includes a migration
->
-> **The full debugging process we used across all 5 episodes:**
-> 1. Reproduce the symptom with a script (`ep#:run`)
-> 2. Inspect the live system state with CLI tools (`psql`, `functions logs`, `pg_get_functiondef`)
-> 3. Identify the root cause from evidence — not guessing
-> 4. Apply the minimal fix
-> 5. Confirm with the same reproduction script
-> 6. Assert with a structured verify check (`ep#:verify`)
->
-> Run this to restore the repo to its clean baseline:
-> ```bash
-> pnpm ep5:reset
-> ```
-
----
-
-### Reset gate
-
-If the user asks to start any episode over without having run `pnpm ep5:reset`, say:
-> Run `pnpm ep5:reset` first to clean up before replaying.
-- How to detect schema drift from the CLI by comparing live columns to `types.gen.ts`
-- Where in the development workflow `supabase gen types` should run to prevent drift in production
-
----
-
-## Recording loop
+### 6 · Verify
 
 ```bash
-pnpm ep5:reset                                  # restore committed types.gen.ts + drop notes column
-pnpm ep5:break                                  # add notes column to DB + write stale types.gen.ts
-pnpm ep5:run                                    # reproduce the drift report — paste output below
+pnpm ep5:verify
+```
 
-# run CLI visibility step (see below)
-
-# apply minimal fix (single command — see Ask section)
-# — or for pre-built annotated demo: pnpm ep5:fix
-
-pnpm ep5:run                                    # confirm drift is gone
-pnpm ep5:verify                                 # assert types match live DB + notes present
-pnpm ep5:reset                                  # clean up for next run
+**Expected output:**
+```
+✔  types.gen.ts exists and is not stale
+✔  Live DB columns match types
+✔  notes column present in both
+✔  EP5 PASSED
 ```
 
 ---
 
-## Symptom
+### 7 · Reset
 
+```bash
+pnpm ep5:reset
 ```
-▶ Check  Live DB columns vs types.gen.ts declarations
 
-  Live DB columns : id, user_id, title, amount, created_at, notes
-  Type columns    : id, user_id, title, amount, created_at
+---
 
+## Outro script
+
+> "The pattern: after every migration, regenerate your types. `supabase gen types typescript --local > supabase/types.gen.ts` — one command, and your TypeScript knows what's in the database. In CI, run it before any deploy that includes a migration and fail the build if the diff is non-empty.
+>
+> Here's the prompt to give your agent so it detects and resolves schema drift automatically."
+>
+> [show Replay Prompt on screen]
+>
+> "Next episode: Local to Production — when the fix that works locally is the broken version in production."
+
+---
+
+## The bug (reference)
+
+**What `ep5:break` does:**
+1. Runs `ALTER TABLE receipts ADD COLUMN notes TEXT;` against the live DB
+2. Writes a stale `supabase/types.gen.ts` that does not include `notes`
+
+**Broken output:**
+```
 ✘  Columns in DB but MISSING from types: notes
 ⚠  Drift detected!
 ```
 
-TypeScript compiles without errors — the types are simply missing the field.
-No IDE autocomplete for `notes`, no type-checker validation on insert.
-
----
-
-## CLI visibility step
-
-Confirm the `notes` column exists in the live database:
-
-```bash
-docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
-  "SELECT column_name, data_type, is_nullable \
-   FROM information_schema.columns \
-   WHERE table_schema = 'public' AND table_name = 'receipts' \
-   ORDER BY ordinal_position;"
-```
-
-You will see `notes | text | YES` in the results — the column is real,
-but `supabase/types.gen.ts` doesn't know about it yet.
-
-Fix command (this is the entire fix):
-
+**Fix command:**
 ```bash
 supabase gen types typescript --local > supabase/types.gen.ts
 ```
 
----
-
-## Ask
-
-Paste the `receipts.Row` interface from `supabase/types.gen.ts` and the
-`pnpm ep5:run` output into this chat, then ask:
-
-1. **Root cause**: explain why TypeScript does not raise an error when a DB
-   column exists but is absent from the generated types. Why is this
-   dangerous in production?
-
-2. **Quick diagnostic**: what is the single CLI command that confirms the
-   `notes` column is live in the DB? (See CLI visibility step above.)
-
-3. **Minimal fix**: what single command regenerates `types.gen.ts` from the
-   live schema? (No file edits needed.)
-
-4. **Re-run expectation**: after regeneration, `pnpm ep5:run` should print:
-   ```
-   ✔  No drift detected — live schema matches types.
-   ```
-
-5. **Verify step**: `pnpm ep5:verify` asserts:
-   - `types.gen.ts` exists and does not contain the STALE marker
-   - Live DB columns match columns declared in `types.gen.ts`
-   - `notes` column is present in both
-
-6. **Best practice**: where in a CI/CD pipeline should `supabase gen types`
-   run to prevent this drift reaching production?
-
-7. **Replay commands**:
-   ```bash
-   pnpm ep5:reset && pnpm ep5:break
-   ```
+**Fixed output:**
+```
+✔  No drift detected — live schema matches types.
+```
 
 ---
 
-## Paste area
+## Replay Prompt
 
-**`pnpm ep5:run` output:**
-```
-(paste here)
-```
+> Paste this into Cursor, Claude Code, or Copilot agent mode to replay this episode autonomously.
 
-**`receipts.Row` from `supabase/types.gen.ts`:**
-```ts
-(paste here)
 ```
+You are debugging a Supabase schema drift issue where a database column exists
+in Postgres but is missing from supabase/types.gen.ts.
 
-**`information_schema.columns` output:**
-```
-(paste here)
+Available commands:
+  pnpm ep5:reset    — drop notes column + restore committed types.gen.ts
+  pnpm ep5:break    — add notes column to DB + write stale types.gen.ts
+  pnpm ep5:run      — diff live DB columns against types.gen.ts and report drift
+  pnpm ep5:fix      — regenerate types.gen.ts from live schema
+  pnpm ep5:verify   — assert types.gen.ts is not stale + live columns match types + notes present
+
+Workflow:
+1. Run ep5:reset, then ep5:break to reach a known drifted state
+2. Run ep5:run — confirm notes is in live DB but missing from types
+3. Confirm at DB level: docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT column_name FROM information_schema.columns WHERE table_name = 'receipts';"
+4. Run ep5:fix to regenerate types.gen.ts
+5. Run ep5:run — confirm no drift detected
+6. Run ep5:verify — must exit 0 and print EP5 PASSED before you report done
+7. Run ep5:reset to restore known-good state
+
+Success criteria: ep5:verify exits 0.
+Do not report the episode complete until ep5:verify passes.
+Run ep5:reset as the final step.
 ```

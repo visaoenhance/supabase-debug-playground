@@ -1,267 +1,198 @@
 # EP2 — RPC Debugging
-## Guided episode prompt — paste this entire file into a fresh chat to begin
+
+**Pattern introduced:** RPC call validation — inspect PostgreSQL error objects + verify return shape
 
 ---
 
-## Role
+## What this episode covers
 
-You are a Supabase debugging coach hosting Episode 2 of a hands-on series.
-Guide the user through each step one at a time — do not reveal the root cause, fix, or any future step until the user pastes the exact output you request.
-After each paste, acknowledge what you see before advancing.
-Stay in this episode until the user runs `pnpm ep2:reset` and explicitly asks to move on.
+A Supabase RPC call returns PostgreSQL error code `42703` on every invocation. The error message names a column — but unless you know the PG error taxonomy you might chase the wrong thing. We read the error object, inspect the live function definition in Postgres, identify a one-character typo, fix it, and verify.
 
 ---
 
-## What you know (never reveal ahead of schedule)
+## What the viewer learns
 
-**The bug:**
-The `create_receipt` Postgres function was replaced with a broken version that inserts into a column called `titl` instead of `title`. PostgreSQL error code `42703` — "column does not exist" — is returned on every RPC call.
-
-**Expected broken output from `pnpm ep2:run`:**
-```
-error:
-  code    : 42703
-  message : column "titl" of relation "receipts" does not exist
-  hint    : (none)
-```
-
-**The broken line in the function body:**
-```sql
-insert into public.receipts (titl, amount)
-```
-
-**The fix:**
-```sql
-insert into public.receipts (title, amount)
-```
-Applied via: `docker exec supabase_db_supabase-debug-playground psql -U postgres` with corrected SQL, or via `pnpm ep2:reset` to re-run migrations.
-
-**`pnpm ep2:verify` passes when:** RPC returns no error, response includes `id` (UUID) and `title` matching the input.
+- How to read RPC error objects — `code`, `message`, `hint` — instead of treating them as black boxes
+- What PostgreSQL error code `42703` means and the class of bugs it covers
+- How `pg_get_functiondef` lets you see exactly what SQL is running in your live database
+- How `RAISE NOTICE` works as server-side logging for PL/pgSQL functions
 
 ---
 
-## Episode flow — follow this order exactly, one step at a time
+## Command sequence
 
-### STEP 1 — Open the episode
-
-When the user starts this chat, respond with:
-
-> **Episode 2 of 5 — RPC Debugging**
->
-> We're debugging a Supabase RPC call that fails with a PostgreSQL error every time it's invoked. The client sees an error code but the cause isn't obvious from the message alone.
->
-> **What you'll learn:**
-> - How to read RPC error objects — `code`, `message`, `hint` — instead of treating them as black boxes
-> - How to inspect the live Postgres function definition from the terminal to confirm a server-side typo
-> - How `RAISE NOTICE` works as server-side logging visible in `supabase db logs`
->
-> Run these and paste both outputs here:
-> ```bash
-> pnpm ep2:reset
-> pnpm ep2:break
-> ```
-> _(Step 1 of 6)_
+| # | Command | What it does | What to look for |
+|---|---|---|---|
+| 1 | `pnpm ep2:reset` | Re-runs migrations — known-good RPC | Output: `✔ reset complete` |
+| 2 | `pnpm ep2:break` | Replaces `create_receipt` with broken version | Output: lists the typo being injected |
+| 3 | `pnpm ep2:run` | Calls the RPC — reproduces the failure | **error code 42703, column "titl" does not exist** |
+| 4 | `pg_get_functiondef` | Reads live function body from Postgres | Shows `titl` typo in the INSERT line |
+| 5 | `pnpm ep2:fix` | Applies the corrected function | Output: confirms fix applied |
+| 6 | `pnpm ep2:run` | Same call — confirms fix | **No error, receipt returned with id + title** |
+| 7 | `pnpm ep2:verify` | Formal pass/fail assertion | `✔ EP2 PASSED` |
+| 8 | `pnpm ep2:reset` | Restores known-good state | Clean repo |
 
 ---
 
-### STEP 2 — Reproduce the failure
+## Recording flow
 
-After they paste the break output:
-
-> The broken RPC is live. Run this and paste the full output:
-> ```bash
-> pnpm ep2:run
-> ```
-> _(Step 2 of 6)_
-
-When they paste it:
-- Confirm you see error code `42703` and `column "titl" does not exist`
-- Say: "PostgreSQL is telling us exactly which column is wrong. But let's verify by looking directly at the live function definition. Run this and paste the output:"
-  ```bash
-  docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
-    "SELECT pg_get_functiondef('public.create_receipt(text,numeric)'::regprocedure);"
-  ```
-
----
-
-### STEP 3 — Inspect the live function
-
-When they paste the `pg_get_functiondef` output:
-- Point to the exact INSERT line: `insert into public.receipts (titl, amount)`
-- Name the cause: `titl` is missing the final `e` — a one-character typo
-- Ask: "Before I show the fix — what's the single character change needed here?"
-
-After any response, show the fix:
-
-> **The fix — correct the INSERT line in the function body:**
->
-> Change:
-> ```sql
-> insert into public.receipts (titl, amount)
-> ```
-> To:
-> ```sql
-> insert into public.receipts (title, amount)
-> ```
->
-> Apply it by running one of:
-> ```bash
-> pnpm ep2:fix     # applies the corrected function directly — fastest path for demos
-> # — or —
-> pnpm ep2:reset   # re-runs all migrations (also restores the good function)
-> ```
-> Then confirm with:
-> ```bash
-> pnpm ep2:run
-> ```
-> _(Step 4 of 6)_
-
----
-
-### STEP 4 — Root cause explanation
-
-While they're running the reset, explain:
-
-> **Why this matters beyond the typo:**
-> - PostgreSQL error `42703` always means a column reference that doesn't exist — in a query, function, or trigger
-> - `RAISE NOTICE` inside the function would have logged `create_receipt » title=...` on a successful call — but the crash happens before it ever executes
-> - The Supabase error object has three fields worth checking every time: `code` (the PG error class), `message` (the exact Postgres message), and `hint` (Postgres's suggested fix when available)
-
----
-
-### STEP 5 — Confirm the fix
-
-When they paste the run output after reset:
-- Confirm no error and a receipt with `id` and `title` present
-- Say:
-  ```bash
-  pnpm ep2:verify
-  ```
-  _(Step 5 of 6)_
-
----
-
-### STEP 6 — Verify and close
-
-When they paste output showing `✔  EP2 PASSED`:
-
-> **Episode 2 complete. ✔**
->
-> Here's what we reinforced:
-> - Always inspect RPC error `code` and `message` — Postgres error codes map to specific categories (42703 = undefined column, 23505 = unique violation, etc.)
-> - `pg_get_functiondef` lets you see the exact SQL running in your live database — not what you think you deployed, what's actually there
-> - `RAISE NOTICE` is your server-side `console.log` for PL/pgSQL functions, visible via `supabase db logs`
->
-> Run this to restore the repo:
-> ```bash
-> pnpm ep2:reset
-> ```
-> Then let me know when you're ready for Episode 3.
-> _(Step 6 of 6)_
-
----
-
-### Reset gate
-
-If the user asks to move to any other episode without having run `pnpm ep2:reset`, say:
-> Run `pnpm ep2:reset` first to restore the database before we move on.
-- How to inspect the live Postgres function definition from the CLI to confirm a typo
-- How `RAISE NOTICE` works as server-side logging visible via `supabase db logs`
-
----
-
-## Recording loop
+### 1 · Reset + Break
 
 ```bash
-pnpm ep2:reset                                  # restore known-good RPC via supabase db reset
-pnpm ep2:break                                  # inject broken create_receipt (column typo)
-pnpm ep2:run                                    # reproduce the failure — paste output below
-
-# run CLI visibility step (see below)
-
-# apply minimal fix in your IDE (see Ask section)
-# — or for pre-built annotated demo: pnpm ep2:fix
-
-pnpm ep2:run                                    # confirm error is gone
-pnpm ep2:verify                                 # assert RPC returns a receipt with id + title
-pnpm ep2:reset                                  # clean up for next run
+pnpm ep2:reset
+pnpm ep2:break
 ```
+
+**Say:** "`ep2:reset` re-runs all migrations — the RPC is correct. `ep2:break` replaces it with a broken version that has a one-character typo. The function exists in Postgres — it just crashes on every call."
 
 ---
 
-## Symptom
+### 2 · Reproduce
 
+```bash
+pnpm ep2:run
 ```
-▶ RPC  supabase.rpc('create_receipt', { title: '...', amount: 9.99 })
 
+**Expected output:**
+```
 error:
   code    : 42703
   message : column "titl" of relation "receipts" does not exist
   hint    : null
 ```
 
+**Say:** "PostgreSQL error 42703 — undefined column. The message tells us exactly which column name is wrong: `titl`. That's one character away from a valid column name. Notice there's no hint — Postgres can't suggest a correction for a typo inside a function body. Let's verify by reading the live function definition directly."
+
 ---
 
-## CLI visibility step
-
-Inspect the **live** function definition directly in Postgres:
+### 3 · Diagnose
 
 ```bash
 docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
   "SELECT pg_get_functiondef('public.create_receipt(text,numeric)'::regprocedure);"
 ```
 
-Look at the `INSERT` statement inside the function body — you will see
-`titl` instead of `title`. That's the exact line to fix.
+**Expected:** shows the INSERT line as:
+```sql
+insert into public.receipts (titl, amount)
+```
 
-Also tail Postgres RAISE NOTICE output:
+**Say:** "`pg_get_functiondef` reads the exact SQL running in your live database — not what you think you deployed, what's actually there. The typo is on the INSERT column list. One missing `e`."
+
+Navigate to `supabase/migrations/20240101000001_create_rpc.sql` to show the source.
+
+---
+
+### 4 · Fix
 
 ```bash
-supabase db logs
+pnpm ep2:fix
+```
+
+**Say:** "`ep2:fix` applies the corrected function directly to the running database. In production you'd do this via a migration — here we apply it immediately so we can confirm the fix without a full reset."
+
+---
+
+### 5 · Confirm
+
+```bash
+pnpm ep2:run
+```
+
+**Expected output:**
+```
+✔  RPC returned data with no error
+Receipt: { id: "<uuid>", title: "...", amount: 9.99, ... }
+```
+
+**Say:** "No error. Receipt returned with an `id`. The RPC is working."
+
+---
+
+### 6 · Verify
+
+```bash
+pnpm ep2:verify
+```
+
+**Expected output:**
+```
+✔  RPC returned no error
+✔  Response contains id
+✔  Response contains title
+✔  EP2 PASSED
+```
+
+**Say:** "`ep2:verify` asserts the RPC returns the correct shape — not just that it didn't error. This is the pattern your agent should run after any RPC change."
+
+---
+
+### 7 · Reset
+
+```bash
+pnpm ep2:reset
 ```
 
 ---
 
-## Ask
+## Outro script
 
-Paste the output of `pg_get_functiondef` above into this chat, then ask:
-
-1. **Root cause**: what does PostgreSQL error code `42703` mean, and what
-   exactly is wrong in the SQL function body?
-
-2. **Quick diagnostic**: which specific line in the `INSERT` statement contains
-   the typo, and how does the error message point directly to it?
-
-3. **Minimal fix**: show only the corrected `INSERT` line inside the
-   PL/pgSQL function body. No other changes needed.
-
-4. **Re-run expectation**: after the fix (apply via `docker exec supabase_db_supabase-debug-playground psql -U postgres -c '<fixed sql>'`),
-   `pnpm ep2:run` should print:
-   ```
-   ✔  RPC returned data with no error
-   Receipt: { id: "<uuid>", title: "...", amount: 9.99, ... }
-   ```
-
-5. **Verify step**: `pnpm ep2:verify` asserts:
-   - RPC returns no error
-   - Response contains `id` (UUID)
-   - Response contains the `title` we sent
-
-6. **Replay commands**:
-   ```bash
-   pnpm ep2:reset && pnpm ep2:break
-   ```
+> "The pattern from this episode: when an RPC errors, read the full error object — code, message, hint. PostgreSQL error codes map directly to categories: 42703 is always a missing column reference. `pg_get_functiondef` gives you the ground truth on what SQL is actually running.
+>
+> If you want your agent to validate RPC calls automatically — checking the return shape before telling you it's done — here's the prompt."
+>
+> [show Replay Prompt on screen]
+>
+> "Next episode: CRUD — when `.insert()` returns null data and no error, and you have no idea if anything was actually saved."
 
 ---
 
-## Paste area
+## The bug (reference)
 
-**`pnpm ep2:run` output:**
-```
-(paste here)
-```
+**Broken migration:** `supabase/migrations/20240101000001_create_rpc.sql` (broken version)
 
-**`pg_get_functiondef` output:**
 ```sql
-(paste here)
+insert into public.receipts (titl, amount)  -- 'titl' should be 'title'
+```
+
+**Broken output:**
+```
+error:
+  code    : 42703
+  message : column "titl" of relation "receipts" does not exist
+```
+
+**Fixed output:**
+```
+✔  RPC returned data — { id: "<uuid>", title: "...", amount: 9.99 }
+```
+
+---
+
+## Replay Prompt
+
+> Paste this into Cursor, Claude Code, or Copilot agent mode to replay this episode autonomously.
+
+```
+You are debugging a Supabase RPC that returns PostgreSQL error 42703 on every call.
+
+Available commands:
+  pnpm ep2:reset    — re-run migrations, restore known-good create_receipt function
+  pnpm ep2:break    — inject broken function (column typo)
+  pnpm ep2:run      — call the RPC and print the full error or response
+  pnpm ep2:fix      — apply the corrected function
+  pnpm ep2:verify   — assert RPC returns no error + response contains id and title
+
+Workflow:
+1. Run ep2:reset, then ep2:break to reach a known broken state
+2. Run ep2:run — confirm error code 42703 with column "titl" does not exist
+3. Inspect the live function: docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT pg_get_functiondef('public.create_receipt(text,numeric)'::regprocedure);"
+4. Run ep2:fix to apply the corrected function
+5. Run ep2:run — confirm no error and receipt returned with id + title
+6. Run ep2:verify — must exit 0 and print EP2 PASSED before you report done
+7. Run ep2:reset to restore known-good state
+
+Success criteria: ep2:verify exits 0.
+Do not report the episode complete until ep2:verify passes.
+Run ep2:reset as the final step.
 ```

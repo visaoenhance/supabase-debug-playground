@@ -1,6 +1,6 @@
 # Supabase Debug Playground
 
-A **5-episode video series** repo demonstrating common Supabase debugging scenarios.  
+A **6-episode video series** repo demonstrating common Supabase debugging scenarios.  
 Each episode has a **reset → break → run → fix → verify** workflow you can execute entirely from the terminal — no dashboard required.
 
 > **Scope**: this repo runs entirely **locally** against a Docker-based Supabase stack — no cloud project or Supabase account required.  
@@ -33,7 +33,7 @@ pnpm epN:run
 pnpm epN:verify
 ```
 
-Replace `N` with `1`, `2`, `3`, `4`, or `5`.
+Replace `N` with `1`, `2`, `3`, `4`, `5`, or `6`.
 
 ### Reset commands
 
@@ -55,12 +55,16 @@ supabase-debug-playground/
 ├── package.json
 ├── tsconfig.json
 │
-├── prompts/                      ← paste into Copilot/Cursor during recording
+├── skill/
+│   └── v1.md                     ← Supabase Validation Skill — drop into .cursorrules / CLAUDE.md
+│
+├── prompts/                      ← episode briefs + replay prompts for each episode
 │   ├── ep1.md
 │   ├── ep2.md
 │   ├── ep3.md
 │   ├── ep4.md
-│   └── ep5.md
+│   ├── ep5.md
+│   └── ep6.md
 │
 ├── scripts/
 │   ├── utils.ts                  ← shared helpers (clients, logging, state)
@@ -95,14 +99,7 @@ supabase-debug-playground/
     ├── config.toml
     ├── functions/
     │   ├── echo/
-    │   │   ├── index.ts          ← active (good) version
-    │   │   └── index.broken.ts   ← ep1:break swaps this in
-    │   └── secure-write/
-    │       └── index.ts          ← bonus reference: server-side service_role insert (not wired to an episode)
-    └── migrations/
-        ├── 20240101000000_create_tables.sql
-        ├── 20240101000001_create_rpc.sql
-        └── 20240101000002_rls_policies.sql
+
 ```
     │   │   ├── index.ts          ← active (good) version
     │   │   └── index.broken.ts   ← intentional bugs for ep1:break
@@ -314,6 +311,41 @@ supabase gen types typescript --local > supabase/types.gen.ts
 
 ---
 
+### Episode 6 — Local to Production
+
+> **Concept**: A locally-fixed edge function is not fixed in production until deployed. Production log visibility is dashboard-only — there is no `supabase functions logs` CLI command.
+
+> **Pre-flight**: requires a real Supabase project. Run `pnpm setup:ep6:env` once to fill `.env` with `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, `PROD_SUPABASE_URL`, `PROD_SUPABASE_ANON_KEY`.
+
+| Command | What happens |
+|---------|-------------|
+| `pnpm ep6:break` | Deploys the broken `echo` function to your real Supabase project |
+| `pnpm ep6:run` | POSTs to the production URL and prints status + response |
+| `pnpm ep6:fix` | Deploys the fixed `echo` function to production |
+| `pnpm ep6:verify` | Asserts HTTP 200 + `request_id` present — against the production URL |
+
+**Diagnose production errors** (dashboard only):
+```
+https://supabase.com/dashboard/project/<PROJECT_REF>/functions/echo/logs
+```
+
+**Expected output (broken)**:
+```
+HTTP status: 500
+Response body: "Internal Server Error"
+⚠  No request_id in response
+```
+
+**Expected output (verified)**:
+```
+✔  HTTP 200
+✔  Body contains { ok: true }
+✔  request_id present
+✔  EP6 PASSED
+```
+
+---
+
 ## Utility Commands
 
 | Command | Description |
@@ -329,14 +361,24 @@ supabase gen types typescript --local > supabase/types.gen.ts
 
 ---
 
+## Supabase Validation Skill
+
+[`skill/v1.md`](skill/v1.md) is a standalone agent instruction encoding the principle: **before reporting any Supabase action as complete, run the appropriate validation and confirm it passes.**
+
+Drop it into your project's agent context file:
+- **Cursor**: `.cursorrules`
+- **Claude Code**: `CLAUDE.md`
+- **Copilot**: `.github/copilot-instructions.md`
+
+The skill covers all 6 patterns introduced in this series: edge functions (local + prod), RPC, CRUD, RLS, and schema drift.
+
+---
+
 ## Observability Without the Dashboard
 
-All observability in this repo uses CLI-only tools:
+All local observability in this repo uses CLI-only tools:
 
 ```bash
-# View edge function logs (after pnpm ep1:run)
-supabase functions logs echo --scroll 20
-
 # View Postgres logs (RAISE NOTICE from ep2)
 supabase db logs
 

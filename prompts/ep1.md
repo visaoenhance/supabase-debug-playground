@@ -1,288 +1,220 @@
 # EP1 — Edge Function Logging
-## Guided episode prompt — paste this entire file into a fresh chat to begin
+
+**Pattern introduced:** Edge function deploy validation — HTTP 200 + structured response + request_id
 
 ---
 
-## Role
+## What this episode covers
 
-You are a Supabase debugging coach hosting Episode 1 of a hands-on series.
-Guide the user through each step one at a time — do not reveal the root cause, fix, or any future step until the user pastes the exact output you request.
-After each paste, acknowledge what you see before advancing.
-Stay in this episode until the user runs `pnpm ep1:reset` and explicitly asks to move on.
+The `echo` edge function returns HTTP 500 with an empty body. No message, no context, nothing to act on. We reproduce the failure, read the server log, identify three root causes, apply the fix, and verify it — entirely from the terminal.
+
+**The usual workflow** is Supabase Dashboard → Edge Functions → Logs tab — 3–5 clicks, and a coding agent can't do any of it. This episode replaces that workflow with a repeatable command-line pattern an agent can run autonomously.
 
 ---
 
-## What you know (never reveal ahead of schedule)
+## What the viewer learns
 
-**The bug:**
-`supabase/functions/echo/index.ts` (broken version) calls `Deno.env.get("REQUIRED_API_SECRET")` — a variable never set in local dev — then immediately accesses `.length` on the result (`undefined`). This throws a `TypeError` before any try/catch or logging runs, producing an opaque HTTP 500 with an empty body and no request_id.
+- Why unguarded `Deno.env.get()` calls produce silent crashes
+- Why missing `try/catch` leaves the client with an empty 500 and nothing to debug
+- How to wire a `request_id` so every error is traceable across client and server
+- How `pnpm ep1:verify` provides a pass/fail assertion instead of eyeballing the dashboard
 
-**Three problems:**
-1. Unguarded env var — `undefined.length` throws on every single request
-2. No `try/catch` — Deno surfaces it as a naked 500 with no JSON body
-3. No `request_id` — errors are untrackable across client and server logs
+---
 
-**Expected broken output from `pnpm ep1:run`:**
+## Command sequence
+
+| # | Command | What it does | What to look for |
+|---|---|---|---|
+| 1 | `pnpm ep1:reset` | Restores `index.ts` from git — known-good state | Output: `✔ index.ts restored` |
+| 2 | `pnpm ep1:break` | Overwrites `index.ts` with the broken version | Output: lists the 3 bugs being injected |
+| 3 | `pnpm ep1:run` | POSTs to the local function — reproduces the failure | **HTTP 500, empty body, no request_id** |
+| 4 | _(serve terminal)_ | Runtime error streams to `supabase functions serve` | `TypeError: Cannot read properties of undefined (reading 'length')` |
+| 5 | `pnpm ep1:fix` | Swaps in the annotated fixed version | Output: lists the 3 fixes applied |
+| 6 | `pnpm ep1:run` | Same call — confirms the fix | **HTTP 200, body.ok true, request_id present** |
+| 7 | `pnpm ep1:verify` | Formal pass/fail assertion | `✔ EP1 PASSED` |
+| 8 | `pnpm ep1:reset` | Restores known-good state for next run | Clean repo |
+
+---
+
+## Recording flow
+
+### 1 · Reset + Break
+
+```bash
+pnpm ep1:reset
+pnpm ep1:break
+```
+
+**Say:** "`ep1:reset` puts us in a known-good state — the function works. `ep1:break` injects the three bugs. The function is now broken, but we haven't called it yet."
+
+---
+
+### 2 · Reproduce
+
+```bash
+pnpm ep1:run
+```
+
+**Expected output:**
+```
+HTTP status: 500
+Response body: ""
+⚠  No request_id in response
+```
+
+**Say:** "HTTP 500, empty body, no request_id. In the real world this is all you'd see in your client logs. Three things are missing: a root cause, a body, and any way to trace this specific request."
+
+---
+
+### 3 · Diagnose
+
+Switch to the `supabase functions serve` terminal. You should see:
+```
+TypeError: Cannot read properties of undefined (reading 'length')
+```
+
+**Say:** "The serve terminal is where local edge function logs stream. There's no `supabase functions logs` command for local dev — this terminal is the only place to look. The TypeError tells us the crash happens before any try/catch runs, which is why the client sees nothing."
+
+Navigate to `supabase/functions/echo/index.ts` and show the bug on camera:
+
+```ts
+const secret = Deno.env.get("REQUIRED_API_SECRET");  // returns undefined in local dev
+if (secret.length === 0) { ... }                       // TypeError: undefined.length
+```
+
+**Three root causes:**
+1. `Deno.env.get()` returns `undefined` — the variable isn't set in local dev
+2. `.length` on `undefined` throws before any handler logic runs
+3. No `try/catch` and no `request_id` — the error is invisible and untrackable
+
+---
+
+### 4 · Fix
+
+```bash
+pnpm ep1:fix
+```
+
+**Say:** "`ep1:fix` applies a pre-annotated version of the correct `index.ts`. You can also apply it manually — the inline comments explain each change."
+
+Show the three changes in the file:
+1. Removed the unguarded env var access
+2. `request_id` minted at the top of every request
+3. `try/catch` wrapping the handler — returns JSON error body on failure
+
+---
+
+### 5 · Confirm
+
+```bash
+pnpm ep1:run
+```
+
+**Expected output:**
+```
+HTTP status: 200
+request_id: <uuid>
+Body: { ok: true, request_id: "...", echo: { ... } }
+```
+
+**Say:** "Same command, completely different result. The structured response means the client now has a request_id to search for in logs, and the server returns JSON on failure instead of an empty 500."
+
+---
+
+### 6 · Verify
+
+```bash
+pnpm ep1:verify
+```
+
+**Expected output:**
+```
+✔  HTTP 200
+✔  Body contains { ok: true }
+✔  request_id present
+✔  EP1 PASSED
+```
+
+**Say:** "`ep1:verify` is the assertion layer — not eyeballing the dashboard, not reading JSON manually. Pass/fail. This is the pattern we'll use in every episode and the pattern your agent should apply after every edge function deploy."
+
+---
+
+### 7 · Reset
+
+```bash
+pnpm ep1:reset
+```
+
+Restore known-good state before closing.
+
+---
+
+## Outro script
+
+> "The pattern from this episode: guard env vars, catch all errors, propagate a request_id. Those three changes are the minimum for a debuggable edge function.
+>
+> If you want your Cursor, Claude Code, or Copilot agent to run this validation automatically after every edge function deploy — so it confirms HTTP 200 and request_id before telling you it's done — here's the prompt. Paste it into your project instructions."
+>
+> [show Replay Prompt on screen]
+>
+> "Next episode: RPC debugging — when your database function exists but returns the wrong shape and the client sees nothing useful."
+
+---
+
+## The bug (reference)
+
+**File:** `supabase/functions/echo/index.broken.ts`
+
+```ts
+const secret = Deno.env.get("REQUIRED_API_SECRET");
+if (secret.length === 0) {          // ← TypeError: undefined.length
+  throw new Error("missing secret");
+}
+// no try/catch, no request_id
+```
+
+**Broken output:**
 ```
 HTTP status : 500
 Response body: ""
 request_id  : (missing)
 ```
 
-**Expected server log (broken):**
-```
-TypeError: Cannot read properties of undefined (reading 'length')
-```
-
-**Expected output after fix + `pnpm ep1:run`:**
+**Fixed output:**
 ```
 HTTP status : 200
 request_id  : <uuid>
 Body        : { ok: true, request_id: "...", echo: { ... } }
 ```
 
-**`pnpm ep1:verify` passes when:** HTTP 200, `body.ok === true`, `body.request_id` is a non-empty string.
-
 ---
 
-## Episode flow — follow this order exactly, one step at a time
+## Replay Prompt
 
-### STEP 1 — Open the episode
-
-When the user starts this chat, respond with:
-
-> **Episode 1 of 5 — Edge Function Logging**
->
-> **The scenario:** your `echo` edge function is deployed and returning HTTP 500s. Users are seeing errors. No message, no body, nothing to act on.
->
-> **The usual workflow:** open the Supabase Dashboard → Edge Functions → click the function → open the Logs tab → scroll to find the error. That's 3–5 minutes of manual clicking every time, and a coding agent can't do it at all.
->
-> **What we'll do instead:** reproduce, diagnose, fix, and verify entirely from the terminal — the same way a coding agent (Copilot, Cursor, Claude Code) would need to operate. By the end of this episode you'll have a repeatable command-line pattern that replaces the dashboard workflow and that an agent can run autonomously.
->
-> **What you'll learn:**
-> - Why unguarded env vars produce silent crashes in Deno
-> - Why missing `try/catch` makes edge function errors invisible to the client
-> - How to wire a `request_id` so every error is traceable from client to server log
-> - How to confirm a fix is correct using `verify` — not by eyeballing the dashboard
->
-> **Before we start:** make sure your functions server is running in a separate terminal:
-> ```bash
-> supabase functions serve --no-verify-jwt
-> ```
->
-> Then run these two commands and paste both outputs here:
-> ```bash
-> pnpm ep1:reset
-> pnpm ep1:break
-> ```
-> _(Step 1 of 6)_
-
----
-
-### STEP 2 — Reproduce the failure
-
-After they paste the break output, say:
-
-> The broken version is now live. Run this and paste the full output:
-> ```bash
-> pnpm ep1:run
-> ```
-> _(Step 2 of 6)_
-
-When they paste it:
-- Confirm you see HTTP 500 and an empty body and no request_id
-- Say: "That's the symptom — an empty 500 with nothing to debug. Now let's look at the server side. Switch to the terminal where `supabase functions serve` is running and paste the last few lines of output here."
-
-> **Local dev note:** For local functions, the runtime logs stream directly to the `supabase functions serve` terminal — there is no separate `supabase functions logs` command for local dev. Look there for the TypeError.
-
----
-
-### STEP 3 — Read the server log
-
-When they paste the log:
-- Identify the `TypeError: Cannot read properties of undefined (reading 'length')`
-- Tell them: "The crash is happening before any try/catch or logging runs — that's why the client sees nothing. Let's look at the source. Paste the contents of `supabase/functions/echo/index.ts` here."
-
----
-
-### STEP 4 — Root cause
-
-When they paste the file:
-- Point to the exact line: `if (secret.length === 0)` where `secret` is `undefined`
-- Name all three problems: unguarded env var, no try/catch, no request_id
-- Ask: "Before I show you the fix — what do you think needs to change on that line?"
-
-After any response, show the full fix:
-
-> **Three changes needed in `supabase/functions/echo/index.ts`:**
->
-> **1. Remove or guard the env var** (it's not needed for echo — remove those lines entirely; if you did need it, guard it first):
-> ```ts
-> const secret = Deno.env.get("REQUIRED_API_SECRET");
-> if (!secret) throw new Error("REQUIRED_API_SECRET is not set");
-> ```
->
-> **2. Mint a `request_id` at the top of every request:**
-> ```ts
-> const requestId = req.headers.get("x-request-id") ?? crypto.randomUUID();
-> ```
->
-> **3. Wrap the handler in `try/catch` and return JSON errors:**
-> ```ts
-> try {
->   // handler logic here
->   return new Response(JSON.stringify({ ok: true, request_id: requestId, echo: payload }), { status: 200 });
-> } catch (err) {
->   return new Response(JSON.stringify({ ok: false, error: String(err), request_id: requestId }), { status: 500 });
-> }
-> ```
->
-> Apply these to `supabase/functions/echo/index.ts` and save — or run `pnpm ep1:fix` to apply a pre-built annotated version that comments each change inline. Then run:
-> ```bash
-> pnpm ep1:run
-> ```
-> _(Step 4 of 6)_
-
----
-
-### STEP 5 — Confirm the fix
-
-When they paste the run output after fixing:
-- Confirm HTTP 200, `ok: true`, and a `request_id` present
-- Say: "That's the fixed behaviour. Let's make it official:"
-  ```bash
-  pnpm ep1:verify
-  ```
-  _(Step 5 of 6)_
-
----
-
-### STEP 6 — Verify and close
-
-When they paste output showing `✔  EP1 PASSED`:
-
-> **Episode 1 complete. ✔**
->
-> Here's what we reinforced:
-> - An unguarded `Deno.env.get()` followed by any property access is the #1 cause of silent edge function crashes
-> - Without `try/catch`, Deno returns an empty 500 — no body, no context, nothing to debug
-> - A `request_id` minted on every request is the minimum needed to correlate a client error to a server log
->
-> These three patterns — guard env vars, catch all errors, propagate request IDs — apply to every edge function you write.
->
-> Run this to restore the repo to a clean state:
-> ```bash
-> pnpm ep1:reset
-> ```
-> Then let me know when you're ready for Episode 2.
-> _(Step 6 of 6)_
-
----
-
-### Reset gate
-
-If the user asks to move to any other episode without having run `pnpm ep1:reset`, say:
-> Run `pnpm ep1:reset` first to restore the known-good function before we move on.
-- Why missing `try/catch` and unguarded env vars produce empty error responses
-- How to wire `request_id` and structured JSON logging so errors are traceable in the CLI
-
----
-
-## Recording loop
-
-```bash
-pnpm ep1:reset                                  # restore known-good index.ts
-pnpm ep1:break                                  # inject broken version
-pnpm ep1:run                                    # reproduce the failure — paste output below
-
-# check supabase functions serve terminal for the TypeError
-
-# option A (demo / recording): apply the pre-built annotated fix
-pnpm ep1:fix                                    # overwrites index.ts with commented fix
-
-# option B (learning): hand-edit supabase/functions/echo/index.ts yourself
-
-pnpm ep1:run                                    # confirm output changed
-pnpm ep1:verify                                 # assert HTTP 200 + request_id present
-pnpm ep1:reset                                  # clean up for next run
-```
-
----
-
-## Symptom
+> Paste this into Cursor, Claude Code, or Copilot agent mode to replay this episode autonomously.
 
 ```
-▶ HTTP  POST http://127.0.0.1:54321/functions/v1/echo
-HTTP status : 500
-Response body: ""   ← empty, not JSON
-request_id  : (missing)
+You are debugging a Supabase edge function that returns HTTP 500 with an empty body.
+The functions server is already running locally (supabase functions serve --no-verify-jwt).
+
+Available commands:
+  pnpm ep1:reset    — restore known-good index.ts from git
+  pnpm ep1:break    — inject the broken version
+  pnpm ep1:run      — POST to the local echo function and print the response
+  pnpm ep1:fix      — apply the annotated fix
+  pnpm ep1:verify   — assert HTTP 200 + body.ok === true + request_id present
+
+Workflow:
+1. Run ep1:reset, then ep1:break to reach a known broken state
+2. Run ep1:run — confirm HTTP 500 with empty body and no request_id
+3. Check the supabase functions serve terminal for the server-side error
+4. Run ep1:fix to apply the fix
+5. Run ep1:run — confirm HTTP 200 with request_id in the response body
+6. Run ep1:verify — must exit 0 and print EP1 PASSED before you report done
+7. Run ep1:reset to restore known-good state
+
+Success criteria: ep1:verify exits 0.
+Do not report the episode complete until ep1:verify passes.
+Run ep1:reset as the final step.
 ```
 
----
-
-## CLI visibility step
-
-Check the function's server-side logs immediately after `ep1:run` fails by switching to the terminal where `supabase functions serve` is running.
-
-You should see an uncaught `TypeError: Cannot read properties of undefined (reading 'length')`
-with no structured context around it — no `request_id`, no payload.
-That confirms the crash happens before any logging runs.
-
-> **Local note**: For local development, runtime logs stream directly to the
-> `supabase functions serve` terminal. `supabase functions logs` is for
-> remote/hosted functions only and does not work with local dev. Keep the
-> serve process running in a separate terminal and read logs there.
-
----
-
-## Ask
-
-Paste `supabase/functions/echo/index.ts` into this chat, then ask:
-
-1. **Root cause**: explain in 2–3 sentences what is causing the 500.
-   (Hint: look at `Deno.env.get(...)` and the `.length` call immediately after.)
-
-2. **Quick diagnostic**: what specific lines in `index.ts` will you look for
-   to confirm the root cause?
-
-3. **Minimal fix**: show only the changes needed to:
-   - wrap the handler body in `try/catch`
-   - guard the env var before accessing any of its properties
-   - log a structured JSON object containing `request_id` on every request
-   - return a JSON error body (not an empty 500) when something goes wrong
-
-4. **Re-run expectation**: after the fix, `pnpm ep1:run` should print:
-   ```
-   HTTP status : 200
-   request_id  : <uuid>
-   Body        : { ok: true, request_id: "...", echo: { ... } }
-   ```
-
-5. **Verify step**: `pnpm ep1:verify` asserts:
-   - HTTP 200
-   - `body.ok === true`
-   - `body.request_id` is a non-empty string
-
-6. **Replay commands**:
-   ```bash
-   pnpm ep1:reset && pnpm ep1:break
-   ```
-
----
-
-## Paste area
-
-**`pnpm ep1:run` output:**
-```
-(paste here)
-```
-
-**`supabase functions serve` terminal output (after running `ep1:run`):**
-```
-(paste here)
-```
-
-**`supabase/functions/echo/index.ts` contents:**
-```ts
-(paste here)
-```
