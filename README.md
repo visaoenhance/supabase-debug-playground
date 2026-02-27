@@ -4,7 +4,7 @@ A **6-episode video series** repo demonstrating common Supabase debugging scenar
 Each episode has a **reset → break → run → fix → verify** workflow you can execute entirely from the terminal — no dashboard required.
 
 > **Scope**: this repo runs entirely **locally** against a Docker-based Supabase stack — no cloud project or Supabase account required.  
-> The debugging concepts (RLS, RPC errors, schema drift, CRUD footguns, edge function logging) apply equally to cloud projects. See [Adapt to your own project](#adapt-to-your-own-project) for guidance.
+> The debugging concepts (RLS, RPC errors, schema drift, CRUD footguns, edge function logging) apply equally to cloud projects. See [Using the Validation Skill in Your Own Project](#using-the-validation-skill-in-your-own-project) for guidance.
 
 ---
 
@@ -19,6 +19,16 @@ This repository and its associated skill (`skill/v1.md`) are provided as-is, wit
 Always test in a local or isolated environment before applying changes to shared or production systems.
 
 This repository is intended for educational and debugging pattern demonstration purposes only.
+
+---
+
+## Why This Exists
+
+Supabase failures are often silent. A policy change, a schema drift, or a misconfigured edge function can appear to succeed while breaking something else entirely. Validation is frequently skipped — or agents report success before anything has been verified.
+
+This repo encodes a validation-first contract: every Supabase action has a defined pass condition, and done means the pass condition was confirmed — not that the code was written.
+
+The episodes demonstrate real failure modes. The skill (`skill/v1.md`) captures the patterns as an agent-enforceable standard you can drop into any project.
 
 ---
 
@@ -327,7 +337,7 @@ supabase gen types typescript --local > supabase/types.gen.ts
 
 ### Episode 6 — Local to Production
 
-> **Concept**: A locally-fixed edge function is not fixed in production until deployed. Production log visibility is dashboard-only — there is no `supabase functions logs` CLI command.
+> **Concept**: A locally-fixed edge function is not fixed in production until deployed. Production log visibility is typically accessed via the Supabase dashboard. CLI log availability may vary by environment.
 
 > **Pre-flight**: requires a real Supabase project. Run `pnpm setup:ep6:env` once to fill `.env` with `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, `PROD_SUPABASE_URL`, `PROD_SUPABASE_ANON_KEY`.
 
@@ -433,9 +443,11 @@ All local Supabase commands require Docker Desktop to be running.
 
 ---
 
-## Adapt to your own project
+## Using the Validation Skill in Your Own Project
 
-This repo is intentionally self-contained and local. But the patterns, prompts, and verify scripts are designed to be portable. If you want to apply them to an existing project (local or cloud), here is what maps across:
+This repository is a local teaching harness. The portable component is the Supabase Validation Skill (`skill/v1.md`). Drop that file into your project's agent context to enforce validation discipline automatically.
+
+The patterns, prompts, and verify scripts are also portable. Here is what maps across:
 
 ### Prompts → Cursor / Copilot rules
 
