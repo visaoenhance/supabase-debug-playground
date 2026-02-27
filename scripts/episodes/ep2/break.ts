@@ -43,17 +43,17 @@ log("Bug injected:");
 log(c.red('  INSERT uses column `titl` (missing the e) → PostgreSQL 42703 on every call'));
 log("");
 
-step("SQL", "Applying broken create_receipt via supabase db execute");
+step("SQL", "Applying broken create_receipt via docker exec psql");
 log(c.grey(BROKEN_SQL.trim()));
 
 try {
   execSync(
-    `supabase db execute --local --sql ${JSON.stringify(BROKEN_SQL)}`,
-    { stdio: "inherit" }
+    `docker exec -i supabase_db_supabase-debug-playground psql -U postgres`,
+    { input: BROKEN_SQL, stdio: ["pipe", "inherit", "inherit"] }
   );
   ok("Broken RPC applied to local DB");
 } catch (err) {
-  fail("supabase db execute failed — is Supabase running?");
+  fail("docker exec psql failed — is Supabase running?");
   fail(`  ${err instanceof Error ? err.message : String(err)}`);
   log("  Run: pnpm supabase:start");
   process.exit(1);
@@ -63,6 +63,6 @@ log("");
 log("Next steps:");
 log("  1. pnpm ep2:run  — observe the 42703 error");
 log("  2. Fix the RPC SQL in the migration file");
-log("  3. Apply the fix:  supabase db execute --local --sql <fixed sql>  (or supabase db reset)");
+  log("  3. Apply the fix:  docker exec supabase_db_supabase-debug-playground psql -U postgres -c '<fixed sql>'  (or supabase db reset)");
 log("  4. pnpm ep2:verify");
 hr();

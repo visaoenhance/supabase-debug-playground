@@ -42,20 +42,22 @@ const RESTORE_POLICY = `
 create policy if not exists "receipts: authenticated insert"
   on public.receipts
   for insert
-  with check (auth.role() = 'authenticated');
+  with check ((select auth.role()) = 'authenticated');
 `;
 
 const DISABLE_RLS = `
 alter table public.receipts disable row level security;
 `;
 
+const DB_CONTAINER = "supabase_db_supabase-debug-playground";
+
 function applySql(sql: string, label: string) {
   step("SQL", label);
   log(c.grey(sql.trim()));
   try {
     execSync(
-      `supabase db execute --local --sql ${JSON.stringify(sql)}`,
-      { stdio: "inherit" }
+      `docker exec -i ${DB_CONTAINER} psql -U postgres`,
+      { input: sql, stdio: ["pipe", "inherit", "inherit"] }
     );
     ok("SQL applied");
   } catch (err) {

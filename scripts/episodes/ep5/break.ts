@@ -30,12 +30,13 @@ hr();
 
 step("SQL", "Adding `notes TEXT` column to receipts");
 try {
-  execSync(`supabase db execute --local --sql ${JSON.stringify(ADD_COLUMN_SQL)}`, {
-    stdio: "inherit",
+  execSync(`docker exec -i supabase_db_supabase-debug-playground psql -U postgres`, {
+    input: ADD_COLUMN_SQL,
+    stdio: ["pipe", "inherit", "inherit"],
   });
   ok("Column added");
 } catch (err) {
-  fail("supabase db execute failed — is Supabase running?");
+  fail("docker exec psql failed — is Supabase running?");
   fail(`  ${err instanceof Error ? err.message : String(err)}`);
   log("  Run: pnpm supabase:start");
   process.exit(1);

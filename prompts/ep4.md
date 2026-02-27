@@ -46,7 +46,7 @@ from the app (which uses the `anon` key). Classic RLS confusion.
 List all current RLS policies on the `receipts` table:
 
 ```bash
-supabase db execute --local --sql \
+docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
   "SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE tablename = 'receipts';"
 ```
 
@@ -56,7 +56,7 @@ After `ep4:break` you will see policies for `SELECT` and `DELETE` but
 Also confirm RLS is enabled:
 
 ```bash
-supabase db execute --local --sql \
+docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
   "SELECT relname, relrowsecurity FROM pg_class WHERE relname = 'receipts';"
 ```
 

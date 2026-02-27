@@ -34,7 +34,7 @@ create policy "receipts: owner read"
 create policy "receipts: authenticated insert"
   on public.receipts
   for insert
-  with check (auth.role() = 'authenticated');
+  with check ((select auth.role()) = 'authenticated');
 
 create policy "receipts: owner delete"
   on public.receipts

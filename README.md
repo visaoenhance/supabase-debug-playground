@@ -341,14 +341,14 @@ supabase functions logs echo --scroll 20
 supabase db logs
 
 # Query DB directly
-supabase db execute --local --sql "SELECT * FROM receipts LIMIT 5;"
+docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT * FROM receipts LIMIT 5;"
 
 # List policies
-supabase db execute --local --sql \
+docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
   "SELECT policyname, cmd, qual FROM pg_policies WHERE tablename = 'receipts';"
 
 # Check RLS status
-supabase db execute --local --sql \
+docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
   "SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('receipts','profiles');"
 ```
 
@@ -359,8 +359,8 @@ supabase db execute --local --sql \
 ### "Missing required env var: SUPABASE_URL"
 Copy `.env.example` to `.env` and fill in the values from `pnpm supabase:start`.
 
-### "supabase db execute" fails
-Make sure Supabase is running: `pnpm supabase:start`.
+### Docker exec psql fails
+Make sure Supabase is running: `pnpm supabase:start`. The container `supabase_db_supabase-debug-playground` must be up.
 
 ### Edge function returns 404
 Make sure `supabase functions serve --no-verify-jwt` is running in a separate terminal.

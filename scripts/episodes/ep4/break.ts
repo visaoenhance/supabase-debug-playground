@@ -32,16 +32,16 @@ log(c.red("  3. Result: anon key inserts are silently blocked"));
 log(c.red("  4. service_role bypasses RLS → still works (confusing discrepancy!)"));
 log("");
 
-step("SQL", "Applying break via supabase db execute");
+step("SQL", "Applying break via docker exec psql");
 
 try {
   execSync(
-    `supabase db execute --local --sql ${JSON.stringify(BREAK_SQL)}`,
-    { stdio: "inherit" }
+    `docker exec -i supabase_db_supabase-debug-playground psql -U postgres`,
+    { input: BREAK_SQL, stdio: ["pipe", "inherit", "inherit"] }
   );
   ok("RLS enabled and INSERT policy dropped");
 } catch (err) {
-  fail("supabase db execute failed — is Supabase running?");
+  fail("docker exec psql failed — is Supabase running?");
   fail(`  ${err instanceof Error ? err.message : String(err)}`);
   log("  Run: pnpm supabase:start");
   process.exit(1);

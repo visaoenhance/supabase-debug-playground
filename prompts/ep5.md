@@ -48,7 +48,7 @@ No IDE autocomplete for `notes`, no type-checker validation on insert.
 Confirm the `notes` column exists in the live database:
 
 ```bash
-supabase db execute --local --sql \
+docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
   "SELECT column_name, data_type, is_nullable \
    FROM information_schema.columns \
    WHERE table_schema = 'public' AND table_name = 'receipts' \

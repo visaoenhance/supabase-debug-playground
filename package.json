@@ -33,7 +33,7 @@
     "ep4:run":    "tsx scripts/ep4_rls.ts run",
     "ep4:verify": "tsx scripts/episodes/ep4/verify.ts",
 
-    "ep5:reset":  "git checkout -- supabase/types.gen.ts && supabase db execute --local --sql 'alter table public.receipts drop column if exists notes;' && echo 'EP5 reset: column dropped, types restored'",
+    "ep5:reset":  "git checkout -- supabase/types.gen.ts && docker exec supabase_db_supabase-debug-playground psql -U postgres -c 'alter table public.receipts drop column if exists notes;' && echo 'EP5 reset: column dropped, types restored'",
     "ep5:break":  "tsx scripts/episodes/ep5/break.ts",
     "ep5:run":    "tsx scripts/ep5_schema_drift.ts run",
     "ep5:verify": "tsx scripts/episodes/ep5/verify.ts",

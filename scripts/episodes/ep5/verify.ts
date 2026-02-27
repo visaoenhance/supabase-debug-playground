@@ -10,7 +10,10 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { serviceClient, c, log, hr, ok, fail, step, warn } from "../../utils.js";
+import { execSync } from "node:child_process";
+import { c, log, hr, ok, fail, step } from "../../utils.js";
+
+const DB_CONTAINER = "supabase_db_supabase-debug-playground";
 
 async function main() {
 hr();
@@ -52,26 +55,24 @@ if (passed) {
 
 step("Check", "Live DB columns vs types.gen.ts declarations");
 
-const db = serviceClient();
-const { data: colRows, error: colErr } = await db
-  .from("information_schema.columns" as never)
-  .select("column_name")
-  .eq("table_schema", "public")
-  .eq("table_name", "receipts")
-  .order("ordinal_position");
+let liveColumns: string[];
+try {
+  const sql = `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'receipts' ORDER BY ordinal_position;`;
+  const out = execSync(`docker exec -i ${DB_CONTAINER} psql -U postgres -At`, { input: sql, encoding: "utf8" });
+  liveColumns = out.trim().split("\n").filter(Boolean);
+} catch (err) {
+  fail(`Could not query live columns: ${err instanceof Error ? err.message : String(err)}`);
+  process.exit(1);
+}
 
-if (colErr) {
-  fail(`Could not query information_schema: ${colErr.message}`);
-  passed = false;
-} else {
-  const liveColumns = (colRows as Array<{ column_name: string }>).map((r) => r.column_name);
-  log(`\n  Live DB columns : ${liveColumns.join(", ")}`);
+log(`\n  Live DB columns : ${liveColumns.join(", ")}`);
 
-  if (passed) {
+if (passed) {
     const src = readFileSync(TYPES_FILE, "utf8");
 
     // Extract column names from the receipts Row block
-    const tableMatch = src.match(/receipts:\s*\{[\s\S]*?Row:\s*\{([\s\S]*?)\};/m);
+    // handles both }; (interface style) and } (type style from supabase gen types)
+    const tableMatch = src.match(/receipts:\s*\{[\s\S]*?Row:\s*\{([\s\S]*?)\}/m);
     const typeColumns: string[] = [];
     if (tableMatch) {
       const rowBlock = tableMatch[1];
@@ -109,7 +110,6 @@ if (colErr) {
       passed = false;
     }
   }
-}
 
 hr();
 if (passed) {

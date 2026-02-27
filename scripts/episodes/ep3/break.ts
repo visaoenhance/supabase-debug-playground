@@ -15,7 +15,7 @@
 
 import { join } from "node:path";
 import { applyPatch } from "../_shared/patch.js";
-import { c, log, hr, ok, warn } from "../../utils.js";
+import { c, log, hr, ok, warn, writeState } from "../../utils.js";
 
 const TARGET = join(process.cwd(), "scripts", "ep3_crud.ts");
 
@@ -42,12 +42,14 @@ const status = applyPatch(TARGET, FROM, TO);
 
 if (status === "already-applied") {
   warn("Patch already applied — skipping (idempotent).");
+  writeState({ ep3_mode: "broken" }); // ensure state is correct even if already patched
 } else if (status === "not-applicable") {
   warn("Target string not found in ep3_crud.ts — file may already be fixed or in unknown state.");
   warn("Run `pnpm ep3:reset` then retry.");
   process.exit(1);
 } else {
   ok("scripts/ep3_crud.ts patched");
+  writeState({ ep3_mode: "broken" });
   log("");
   log("What changed in goodInsert:");
   log(c.red("  - .select()        // removed → data will be null"));

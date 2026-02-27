@@ -71,7 +71,7 @@ const RUNBOOKS: Record<number, EpisodeRunbook> = {
     visibility: {
       label: "Inspect live Postgres function definition",
       commands: [
-        `supabase db execute --local --sql "SELECT pg_get_functiondef('public.create_receipt(text,numeric)'::regprocedure);"`,
+        `docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT pg_get_functiondef('public.create_receipt(text,numeric)'::regprocedure);"`,
         "",
         "# Also tail RAISE NOTICE output:",
         "supabase db logs",
@@ -134,9 +134,9 @@ const RUNBOOKS: Record<number, EpisodeRunbook> = {
     visibility: {
       label: "List live RLS policies + RLS status",
       commands: [
-        `supabase db execute --local --sql "SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE tablename = 'receipts';"`,
+        `docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE tablename = 'receipts';"`,
         "",
-        `supabase db execute --local --sql "SELECT relname, relrowsecurity FROM pg_class WHERE relname = 'receipts';"`,
+        `docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT relname, relrowsecurity FROM pg_class WHERE relname = 'receipts';"`,
       ],
     },
   },
@@ -163,7 +163,7 @@ const RUNBOOKS: Record<number, EpisodeRunbook> = {
     visibility: {
       label: "Confirm column in DB + regenerate types",
       commands: [
-        `supabase db execute --local --sql "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'receipts' ORDER BY ordinal_position;"`,
+        `docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'receipts' ORDER BY ordinal_position;"`,
         "",
         "# Fix command (entire fix is this one line):",
         "supabase gen types typescript --local > supabase/types.gen.ts",

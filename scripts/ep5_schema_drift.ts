@@ -43,13 +43,15 @@ alter table public.receipts
   drop column if exists notes;
 `;
 
+const DB_CONTAINER = "supabase_db_supabase-debug-playground";
+
 function applySql(sql: string, label: string) {
   step("SQL", label);
   log(c.grey(sql.trim()));
   try {
     execSync(
-      `supabase db execute --local --sql ${JSON.stringify(sql)}`,
-      { stdio: "inherit" }
+      `docker exec -i ${DB_CONTAINER} psql -U postgres`,
+      { input: sql, stdio: ["pipe", "inherit", "inherit"] }
     );
     ok("SQL applied");
   } catch (err) {
@@ -152,20 +154,23 @@ function regenerateTypes() {
 // ── Drift checker ─────────────────────────────────────────────────────────────
 
 async function getLiveColumns(table: string): Promise<string[]> {
-  const db = serviceClient();
-  const { data, error } = await db
-    .from("information_schema.columns" as never)
-    .select("column_name")
-    .eq("table_schema", "public")
-    .eq("table_name", table)
-    .order("ordinal_position");
-
-  if (error) {
-    fail(`Could not query information_schema: ${error.message}`);
+  const sql = `
+SELECT column_name
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = '${table}'
+ORDER BY ordinal_position;
+`;
+  let output: string;
+  try {
+    output = execSync(
+      `docker exec -i ${DB_CONTAINER} psql -U postgres -At`,
+      { input: sql, encoding: "utf8" }
+    );
+  } catch (err) {
+    fail(`Could not query live columns: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
-
-  return (data as Array<{ column_name: string }>).map((r) => r.column_name);
+  return output.trim().split("\n").filter(Boolean);
 }
 
 function getTypesColumns(table: string): string[] {
@@ -177,9 +182,10 @@ function getTypesColumns(table: string): string[] {
   const src = readFileSync(TYPES_FILE, "utf8");
 
   // Extract column names from the Row block for the given table
-  // Looks for:   id: string;   amount: number;  notes: string | null;  etc.
+  // Looks for:   id: string   amount: number   notes: string | null   etc.
+  // Handles both }; (interface style) and } (type style from supabase gen types)
   const tableRegex = new RegExp(
-    `${table}:\\s*\\{[\\s\\S]*?Row:\\s*\\{([\\s\\S]*?)\\};`,
+    `${table}:\\s*\\{[\\s\\S]*?Row:\\s*\\{([\\s\\S]*?)\\}`,
     "m"
   );
   const match = src.match(tableRegex);
@@ -224,7 +230,7 @@ async function runDriftCheck(): Promise<{ added: string[]; removed: string[] }> 
     ok("No drift detected — live schema matches types.");
   } else {
     if (added.length > 0) {
-      fail(`Columns in DB but MISSING from types: ${added.map((c) => c.bold ?? c).join(", ")}`);
+      fail(`Columns in DB but MISSING from types: ${added.join(", ")}`);
       log(c.red(`  → ${added.join(", ")}`));
     }
     if (removed.length > 0) {

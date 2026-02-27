@@ -103,22 +103,35 @@ export function writeState(patch: State): void {
   writeFileSync(STATE_FILE, JSON.stringify({ ...current, ...patch }, null, 2));
 }
 
-// ── SQL helper via supabase CLI ───────────────────────────────────────────────
+// ── SQL helper via docker exec psql ──────────────────────────────────────────
+// `supabase db execute --local` was removed in CLI ≥ v2.x; docker exec is the
+// reliable cross-version alternative (Docker is already required to run this).
+// SQL is passed via stdin (not -c) to avoid shell escaping issues with multi-line
+// SQL containing $$ function bodies.
 
 import { execSync } from "node:child_process";
+import { unlinkSync as _unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as _joinTmp } from "node:path";
+
+const DB_CONTAINER = "supabase_db_supabase-debug-playground";
 
 export function runSQL(sql: string, label = "SQL"): void {
   step("SQL", label);
   log(c.grey(sql.trim()));
+  // Write SQL to a temp file inside the container via docker exec + stdin pipe
   try {
-    execSync(`supabase db execute --local --sql ${JSON.stringify(sql)}`, {
-      stdio: "inherit",
+    execSync(`docker exec -i ${DB_CONTAINER} psql -U postgres`, {
+      input: sql,
+      stdio: ["pipe", "inherit", "inherit"],
     });
     ok("SQL executed successfully");
   } catch (err) {
     bail(`SQL execution failed: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
+
+export { DB_CONTAINER };
 
 // ── CLI argument parser ───────────────────────────────────────────────────────
 

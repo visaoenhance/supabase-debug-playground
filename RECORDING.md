@@ -72,9 +72,10 @@ pnpm epN:reset        # clean up before ending recording
 - Bug is in the live DB, not a file — `ep2:reset` runs `supabase db reset`
 - CLI visibility (show live function definition):
   ```bash
-  supabase db execute --local --sql "SELECT pg_get_functiondef('public.create_receipt(text,numeric)'::regprocedure);"
+  docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
+    "SELECT pg_get_functiondef('public.create_receipt(text,numeric)'::regprocedure);"
   ```
-- Fix is applied via `supabase db execute --local` or by correcting the migration and running `supabase db reset`
+- Fix is applied via `docker exec supabase_db_supabase-debug-playground psql -U postgres` or by correcting the migration and running `supabase db reset`
 - `RAISE NOTICE` output visible via `supabase db logs`
 
 ### EP3 — CRUD "Did it save?"
@@ -89,7 +90,8 @@ pnpm epN:reset        # clean up before ending recording
 - Bug is in the live DB — `ep4:reset` runs `supabase db reset`
 - CLI visibility (show missing policy):
   ```bash
-  supabase db execute --local --sql "SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE tablename = 'receipts';"
+  docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
+    "SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE tablename = 'receipts';"
   ```
 - Key talking point: `service_role` **always** bypasses RLS — dashboard uses `service_role`
 - Fix is a `CREATE POLICY` statement with `WITH CHECK (auth.role() = 'authenticated')`
@@ -100,7 +102,8 @@ pnpm epN:reset        # clean up before ending recording
 - Bug is split: DB has the column, `types.gen.ts` doesn't — `ep5:reset` handles both
 - CLI visibility (confirm column exists in DB):
   ```bash
-  supabase db execute --local --sql "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'receipts' ORDER BY ordinal_position;"
+  docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
+    "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'receipts' ORDER BY ordinal_position;"
   ```
 - Fix is one command:
   ```bash

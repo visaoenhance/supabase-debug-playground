@@ -19,18 +19,34 @@ hr();
 // ── helper ────────────────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function tryInsert(label: string, client: any): Promise<boolean> {
-  step("Insert", `[${label}]  receipts.insert(...).select()`);
-  const { data, error } = await client
-    .from("receipts")
-    .insert({ title: `EP4 verify — ${label}`, amount: 0.01 })
-    .select();
+async function tryInsert(label: string, client: any, minimal = false): Promise<boolean> {
+  // minimal=true  → no .select() → PostgREST sends "Prefer: return=minimal"
+  //                 (no RETURNING clause, so the SELECT read-policy is not evaluated)
+  // minimal=false → chains .select() → INSERT…RETURNING (default for service_role tests)
+  step("Insert", `[${label}]  receipts.insert(...)${minimal ? "" : ".select()"}`);
 
-  if (error) {
-    fail(`[${label}] BLOCKED  →  ${error.message}`);
+  let insertError: { message: string } | null = null;
+  let insertedId: string | undefined;
+
+  if (minimal) {
+    const { error } = await client
+      .from("receipts")
+      .insert({ title: `EP4 verify — ${label}`, amount: 0.01 });
+    insertError = error;
+  } else {
+    const { data, error } = await client
+      .from("receipts")
+      .insert({ title: `EP4 verify — ${label}`, amount: 0.01 })
+      .select();
+    insertError = error;
+    insertedId = (data as Array<{ id: string }>)?.[0]?.id;
+  }
+
+  if (insertError) {
+    fail(`[${label}] BLOCKED  →  ${insertError.message}`);
     return false;
   }
-  ok(`[${label}] ALLOWED  →  id: ${(data as Array<{ id: string }>)[0]?.id}`);
+  ok(`[${label}] ALLOWED${insertedId ? `  →  id: ${insertedId}` : ""}`);
   return true;
 }
 
@@ -39,13 +55,15 @@ async function tryInsert(label: string, client: any): Promise<boolean> {
 log("Applying fix SQL (ensures INSERT policy + RLS are both active)...");
 const FIX_SQL = `
 alter table public.receipts enable row level security;
-create policy if not exists "receipts: authenticated insert"
+drop policy if exists "receipts: authenticated insert" on public.receipts;
+create policy "receipts: authenticated insert"
   on public.receipts
   for insert
   with check (auth.role() = 'authenticated');
 `;
 try {
-  execSync(`supabase db execute --local --sql ${JSON.stringify(FIX_SQL)}`, { stdio: "pipe" });
+  execSync(`docker exec -i supabase_db_supabase-debug-playground psql -U postgres`,
+    { input: FIX_SQL, stdio: ["pipe", "pipe", "pipe"] });
   ok("INSERT policy confirmed present");
 } catch (err) {
   fail(`Could not apply fix SQL: ${err instanceof Error ? err.message : String(err)}`);
@@ -105,7 +123,10 @@ if (createErr || !newUser?.user) {
     warn(`Sign-in failed: ${signInErr.message}`);
   } else {
     ok("Signed in as temp user");
-    const t2Allowed = await tryInsert("anon (authed)", userClient);
+    // Use minimal=true so PostgREST sends "Prefer: return=minimal" (no INSERT…RETURNING).
+    // Without this, the chained .select() triggers a RETURNING that hits the owner-read
+    // SELECT policy (user_id = auth.uid()), which fails because user_id is NULL here.
+    const t2Allowed = await tryInsert("anon (authed)", userClient, true);
     if (t2Allowed) {
       ok("Correct — authenticated insert allowed by INSERT policy");
     } else {

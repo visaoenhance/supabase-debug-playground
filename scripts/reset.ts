@@ -20,12 +20,14 @@ const GOOD_SRC      = join(FUNCTIONS_DIR, "index.ts"); // kept for reference in 
 const STATE_FILE    = join(process.cwd(), ".playground-state.json");
 const TYPES_FILE    = join(process.cwd(), "supabase", "types.gen.ts");
 
+const DB_CONTAINER = "supabase_db_supabase-debug-playground";
+
 function runSql(sql: string, label: string) {
   step("SQL", label);
   try {
     execSync(
-      `supabase db execute --local --sql ${JSON.stringify(sql)}`,
-      { stdio: "inherit" }
+      `docker exec -i ${DB_CONTAINER} psql -U postgres`,
+      { input: sql, stdio: ["pipe", "inherit", "inherit"] }
     );
     ok("done");
   } catch (err) {

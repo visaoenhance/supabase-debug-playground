@@ -44,7 +44,7 @@ error:
 Inspect the **live** function definition directly in Postgres:
 
 ```bash
-supabase db execute --local --sql \
+docker exec supabase_db_supabase-debug-playground psql -U postgres -c \
   "SELECT pg_get_functiondef('public.create_receipt(text,numeric)'::regprocedure);"
 ```
 
@@ -72,7 +72,7 @@ Paste the output of `pg_get_functiondef` above into this chat, then ask:
 3. **Minimal fix**: show only the corrected `INSERT` line inside the
    PL/pgSQL function body. No other changes needed.
 
-4. **Re-run expectation**: after the fix (apply via `supabase db execute --local`),
+4. **Re-run expectation**: after the fix (apply via `docker exec supabase_db_supabase-debug-playground psql -U postgres -c '<fixed sql>'`),
    `pnpm ep2:run` should print:
    ```
    ✔  RPC returned data with no error
