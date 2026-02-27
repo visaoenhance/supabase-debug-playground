@@ -4,7 +4,7 @@ A **6-episode video series** repo demonstrating common Supabase debugging scenar
 Each episode has a **reset → break → run → fix → verify** workflow you can execute entirely from the terminal — no dashboard required.
 
 > **Scope**: this repo runs entirely **locally** against a Docker-based Supabase stack — no cloud project or Supabase account required.  
-> The debugging concepts (RLS, RPC errors, schema drift, CRUD footguns, edge function logging) apply equally to cloud projects. See [Using the Validation Skill in Your Own Project](#using-the-validation-skill-in-your-own-project) for guidance.
+> The debugging concepts (RLS, RPC errors, schema drift, CRUD footguns, edge function logging) apply equally to cloud projects. The Supabase Validation Skill (`skill/v1.md`) is the portable component — see [Using the Validation Skill in Your Own Project](#using-the-validation-skill-in-your-own-project).
 
 ---
 
