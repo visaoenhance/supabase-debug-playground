@@ -127,7 +127,7 @@ const RUNBOOKS: Record<number, EpisodeRunbook> = {
       "# ── run CLI visibility step (see below) ──",
       "# ── apply minimal fix in your IDE ──",
       "",
-      "pnpm ep4:run            # confirm anon is no longer blocked",
+      "pnpm ep4:run            # output looks identical — anon still blocked, that's expected",
       "pnpm ep4:verify         # assert all 3 scenarios pass",
       "pnpm ep4:reset          # clean up",
     ],
@@ -217,7 +217,7 @@ function printRunbook(ep: number) {
   log("");
   hr();
   log(c.grey(`  Prompt file: prompts/ep${ep}.md`));
-  log(c.grey(`  Paste pnpm ep${ep}:run output + relevant file snippet into that file, then open in Cursor/Copilot.`));
+  log(c.grey(`  Run pnpm ep${ep}:prompt to copy the episode prompt to your clipboard, then paste into a new Cursor/Copilot chat.`));
   hr();
 }
 
