@@ -19,10 +19,15 @@ pnpm ep4:run                                    # reproduce the failure — past
 
 # apply minimal fix in your IDE (see Ask section)
 
-pnpm ep4:run                                    # confirm anon is no longer blocked
-pnpm ep4:verify                                 # assert all 3 scenarios pass
+pnpm ep4:run                                    # still shows anon BLOCKED — that's correct (see note)
+pnpm ep4:verify                                 # confirms all 3 scenarios: unauthed blocked, authed allowed, service allowed
 pnpm ep4:reset                                  # clean up for next run
 ```
+
+> **Note**: after adding the INSERT policy, `ep4:run` looks the same as the broken state
+> (unauthed anon still BLOCKED, service still ALLOWED). That's expected — the INSERT policy
+> only unlocks **authenticated** users, and `ep4:run` uses an unauthenticated anon key.
+> Run `ep4:verify` to see the full picture including the authenticated scenario.
 
 ---
 
@@ -77,11 +82,16 @@ Paste the `pg_policies` output above into this chat, then ask:
    - allows only authenticated users (not anonymous)
    - uses `WITH CHECK (auth.role() = 'authenticated')` correctly
 
-4. **Re-run expectation**: after adding the policy, `pnpm ep4:run` should show:
+4. **Re-run expectation**: after adding the policy, `pnpm ep4:run` intentionally shows
+   the same two rows as before — unauthenticated anon is still BLOCKED (correct: no session
+   means no insert regardless of policy), service_role is still ALLOWED. The INSERT policy
+   only helps **authenticated** users, which `ep4:run` does not test.
+
+   Run `pnpm ep4:verify` to see all three scenarios:
    ```
-   ✘  [anon unauthed]  BLOCKED  ← expected: no session = no insert
-   ✔  [anon authed  ]  ALLOWED  ← expected: authenticated session passes WITH CHECK
-   ✔  [service      ]  ALLOWED  ← expected: service_role always bypasses RLS
+   ✘  [anon (unauthed)]  BLOCKED  ← correct: no session, policy denies
+   ✔  [anon (authed)  ]  ALLOWED  ← correct: authenticated session passes WITH CHECK
+   ✔  [service_role   ]  ALLOWED  ← correct: service_role always bypasses RLS
    ```
 
 5. **Verify step**: `pnpm ep4:verify` asserts all three scenarios above pass.

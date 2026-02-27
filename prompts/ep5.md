@@ -83,7 +83,7 @@ Paste the `receipts.Row` interface from `supabase/types.gen.ts` and the
 
 4. **Re-run expectation**: after regeneration, `pnpm ep5:run` should print:
    ```
-   ✔  No drift detected — types.gen.ts matches live schema
+   ✔  No drift detected — live schema matches types.
    ```
 
 5. **Verify step**: `pnpm ep5:verify` asserts:
