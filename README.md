@@ -8,6 +8,18 @@ Each episode has a **reset → break → run → fix → verify** workflow you c
 
 ---
 
+## ⚠ Disclaimer — No Warranty
+
+This repository and its associated skill (`skill/v1.md`) are provided as-is, without warranty of any kind.
+
+- This code may modify databases, policies, migrations, or deployed functions.
+- You are responsible for understanding the environment (local, staging, production) before executing any command.
+- The authors are not responsible for data loss, downtime, misconfiguration, or security exposure resulting from use of this repository or its patterns.
+
+Always test in a local or isolated environment before applying changes to shared or production systems.
+
+---
+
 ## Episode Recording Loop
 
 This is the exact loop to follow for every episode.  
