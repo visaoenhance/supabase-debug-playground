@@ -152,7 +152,7 @@ pnpm ep4:reset
 >
 > Here's the prompt to give your agent so it runs this validation automatically."
 >
-> [show Replay Prompt on screen]
+> [show Embed Skill Prompt on screen]
 >
 > "Next episode: schema drift — when TypeScript has no idea a database column exists."
 
@@ -180,6 +180,14 @@ CREATE POLICY "receipts: authenticated insert"
 
 ---
 
+## References
+
+- [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security) — policies, roles, and `service_role` bypass behaviour
+- [Debugging and Monitoring](https://supabase.com/docs/guides/database/inspect) — `pg_policies` and live schema inspection
+- [Hardening the Data API](https://supabase.com/docs/guides/database/hardening-data-api) — securing public vs private schemas
+
+---
+
 ## Replay Prompt
 
 > Paste this into Cursor, Claude Code, or Copilot agent mode to replay this episode autonomously.
@@ -188,6 +196,16 @@ CREATE POLICY "receipts: authenticated insert"
 You are debugging a Supabase RLS issue where inserts work via service_role
 but are blocked for the anon key with error 42501.
 
+** STOP — do not run any commands yet. **
+
+Read the plan below, then ask the user:
+  "Ready to go? Reply 'run' to have me execute each step, or 'terminal' if you'd
+   prefer to run the commands yourself and I'll guide you through them."
+
+Wait for the user's reply before doing anything.
+
+---
+
 Available commands:
   pnpm ep4:reset    — restore baseline (RLS off, INSERT policy present)
   pnpm ep4:break    — enable RLS and drop the INSERT policy
@@ -195,17 +213,33 @@ Available commands:
   pnpm ep4:fix      — re-create the INSERT policy
   pnpm ep4:verify   — assert all 3 scenarios: unauthed blocked, authed allowed, service allowed
 
-Workflow:
-1. Run ep4:reset, then ep4:break to reach a known broken state
-2. Run ep4:run — confirm anon BLOCKED (42501) and service_role ALLOWED
-3. Query pg_policies: docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT policyname, cmd FROM pg_policies WHERE tablename = 'receipts';"
-4. Confirm no INSERT (cmd=a) policy exists
-5. Run ep4:fix to add the INSERT policy
-6. Run ep4:run — anon still blocked (expected: policy is for authenticated users, ep4:run uses unauthenticated)
-7. Run ep4:verify — must exit 0 and print EP4 PASSED before you report done
-8. Run ep4:reset to restore known-good state
+Plan (8 steps):
+  1. pnpm ep4:reset   → restore baseline (RLS off, INSERT policy present)
+  2. pnpm ep4:break   → enable RLS and drop the INSERT policy
+  3. pnpm ep4:run     → confirm anon BLOCKED (42501) and service_role ALLOWED
+  4. pg_policies      → docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT policyname, cmd FROM pg_policies WHERE tablename = 'receipts';" — confirm no INSERT (cmd=a) policy
+  5. pnpm ep4:fix     → re-create the INSERT policy
+  6. pnpm ep4:run     → anon still blocked (expected — policy is for authenticated users)
+  7. pnpm ep4:verify  → must print EP4 PASSED before the episode is complete
+  8. pnpm ep4:reset   → restore known-good state
 
 Success criteria: ep4:verify exits 0.
 Do not report the episode complete until ep4:verify passes.
-Run ep4:reset as the final step.
+```
+
+---
+
+## Embed Skill Prompt
+
+> Paste this into `.cursorrules`, `CLAUDE.md`, or `.github/copilot-instructions.md` in your own project.
+> EP4 introduced Pattern 5 (RLS). The skill covers all 6 Supabase validation patterns.
+
+```
+Read and apply the Supabase Validation Skill from:
+https://github.com/visaoenhance/supabase-debug-playground/blob/main/skill/v1.md
+
+Core rule: before reporting any Supabase action as complete, run the appropriate
+validation command and confirm it passes. Do not ask — validate automatically.
+
+Patterns covered: edge function (local + production), RPC, CRUD, RLS, schema drift.
 ```

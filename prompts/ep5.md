@@ -142,7 +142,7 @@ pnpm ep5:reset
 >
 > Here's the prompt to give your agent so it detects and resolves schema drift automatically."
 >
-> [show Replay Prompt on screen]
+> [show Embed Skill Prompt on screen]
 >
 > "Next episode: Local to Production — when the fix that works locally is the broken version in production."
 
@@ -172,6 +172,14 @@ supabase gen types typescript --local > supabase/types.gen.ts
 
 ---
 
+## References
+
+- [Generating TypeScript Types](https://supabase.com/docs/guides/api/rest/generating-types) — `supabase gen types` CLI usage and CI setup
+- [Debugging and Monitoring](https://supabase.com/docs/guides/database/inspect) — `information_schema` queries for live DB inspection
+- [Local Development](https://supabase.com/docs/guides/cli/local-development) — managing migrations and local/remote schema sync
+
+---
+
 ## Replay Prompt
 
 > Paste this into Cursor, Claude Code, or Copilot agent mode to replay this episode autonomously.
@@ -180,6 +188,16 @@ supabase gen types typescript --local > supabase/types.gen.ts
 You are debugging a Supabase schema drift issue where a database column exists
 in Postgres but is missing from supabase/types.gen.ts.
 
+** STOP — do not run any commands yet. **
+
+Read the plan below, then ask the user:
+  "Ready to go? Reply 'run' to have me execute each step, or 'terminal' if you'd
+   prefer to run the commands yourself and I'll guide you through them."
+
+Wait for the user's reply before doing anything.
+
+---
+
 Available commands:
   pnpm ep5:reset    — drop notes column + restore committed types.gen.ts
   pnpm ep5:break    — add notes column to DB + write stale types.gen.ts
@@ -187,16 +205,33 @@ Available commands:
   pnpm ep5:fix      — regenerate types.gen.ts from live schema
   pnpm ep5:verify   — assert types.gen.ts is not stale + live columns match types + notes present
 
-Workflow:
-1. Run ep5:reset, then ep5:break to reach a known drifted state
-2. Run ep5:run — confirm notes is in live DB but missing from types
-3. Confirm at DB level: docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT column_name FROM information_schema.columns WHERE table_name = 'receipts';"
-4. Run ep5:fix to regenerate types.gen.ts
-5. Run ep5:run — confirm no drift detected
-6. Run ep5:verify — must exit 0 and print EP5 PASSED before you report done
-7. Run ep5:reset to restore known-good state
+Plan (8 steps):
+  1. pnpm ep5:reset   → drop notes column + restore committed types.gen.ts
+  2. pnpm ep5:break   → add notes column to DB + write stale types.gen.ts
+  3. pnpm ep5:run     → confirm notes is in live DB but missing from types
+  4. (DB check)       → docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT column_name FROM information_schema.columns WHERE table_name = 'receipts';" — confirm notes is live
+  5. pnpm ep5:fix     → regenerate types.gen.ts from live schema
+  6. pnpm ep5:run     → confirm no drift detected
+  7. pnpm ep5:verify  → must print EP5 PASSED before the episode is complete
+  8. pnpm ep5:reset   → restore known-good state
 
 Success criteria: ep5:verify exits 0.
 Do not report the episode complete until ep5:verify passes.
-Run ep5:reset as the final step.
+```
+
+---
+
+## Embed Skill Prompt
+
+> Paste this into `.cursorrules`, `CLAUDE.md`, or `.github/copilot-instructions.md` in your own project.
+> EP5 introduced Pattern 6 (schema drift). The skill covers all 6 Supabase validation patterns.
+
+```
+Read and apply the Supabase Validation Skill from:
+https://github.com/visaoenhance/supabase-debug-playground/blob/main/skill/v1.md
+
+Core rule: before reporting any Supabase action as complete, run the appropriate
+validation command and confirm it passes. Do not ask — validate automatically.
+
+Patterns covered: edge function (local + production), RPC, CRUD, RLS, schema drift.
 ```

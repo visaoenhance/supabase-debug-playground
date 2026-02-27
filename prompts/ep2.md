@@ -141,7 +141,7 @@ pnpm ep2:reset
 >
 > If you want your agent to validate RPC calls automatically — checking the return shape before telling you it's done — here's the prompt."
 >
-> [show Replay Prompt on screen]
+> [show Embed Skill Prompt on screen]
 >
 > "Next episode: CRUD — when `.insert()` returns null data and no error, and you have no idea if anything was actually saved."
 
@@ -169,12 +169,30 @@ error:
 
 ---
 
+## References
+
+- [Database Functions](https://supabase.com/docs/guides/database/functions) — creating and debugging PL/pgSQL functions
+- [JavaScript RPC](https://supabase.com/docs/reference/javascript/rpc) — `supabase.rpc()` usage and error shape
+- [PostgREST Error Codes](https://supabase.com/docs/guides/api/rest/postgrest-error-codes) — PostgreSQL error code taxonomy (42703 and others)
+
+---
+
 ## Replay Prompt
 
 > Paste this into Cursor, Claude Code, or Copilot agent mode to replay this episode autonomously.
 
 ```
 You are debugging a Supabase RPC that returns PostgreSQL error 42703 on every call.
+
+** STOP — do not run any commands yet. **
+
+Read the plan below, then ask the user:
+  "Ready to go? Reply 'run' to have me execute each step, or 'terminal' if you'd
+   prefer to run the commands yourself and I'll guide you through them."
+
+Wait for the user's reply before doing anything.
+
+---
 
 Available commands:
   pnpm ep2:reset    — re-run migrations, restore known-good create_receipt function
@@ -183,16 +201,33 @@ Available commands:
   pnpm ep2:fix      — apply the corrected function
   pnpm ep2:verify   — assert RPC returns no error + response contains id and title
 
-Workflow:
-1. Run ep2:reset, then ep2:break to reach a known broken state
-2. Run ep2:run — confirm error code 42703 with column "titl" does not exist
-3. Inspect the live function: docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT pg_get_functiondef('public.create_receipt(text,numeric)'::regprocedure);"
-4. Run ep2:fix to apply the corrected function
-5. Run ep2:run — confirm no error and receipt returned with id + title
-6. Run ep2:verify — must exit 0 and print EP2 PASSED before you report done
-7. Run ep2:reset to restore known-good state
+Plan (7 steps):
+  1. pnpm ep2:reset   → restore known-good create_receipt function
+  2. pnpm ep2:break   → inject column typo (titl instead of title)
+  3. pnpm ep2:run     → confirm error code 42703, column "titl" does not exist
+  4. pg_get_functiondef → inspect live SQL: docker exec supabase_db_supabase-debug-playground psql -U postgres -c "SELECT pg_get_functiondef('public.create_receipt(text,numeric)'::regprocedure);"
+  5. pnpm ep2:fix     → apply the corrected function
+  6. pnpm ep2:run     → confirm no error, receipt returned with id + title
+  7. pnpm ep2:verify  → must print EP2 PASSED before the episode is complete
+  8. pnpm ep2:reset   → restore known-good state
 
 Success criteria: ep2:verify exits 0.
 Do not report the episode complete until ep2:verify passes.
-Run ep2:reset as the final step.
+```
+
+---
+
+## Embed Skill Prompt
+
+> Paste this into `.cursorrules`, `CLAUDE.md`, or `.github/copilot-instructions.md` in your own project.
+> EP2 introduced Pattern 3 (RPC). The skill covers all 6 Supabase validation patterns.
+
+```
+Read and apply the Supabase Validation Skill from:
+https://github.com/visaoenhance/supabase-debug-playground/blob/main/skill/v1.md
+
+Core rule: before reporting any Supabase action as complete, run the appropriate
+validation command and confirm it passes. Do not ask — validate automatically.
+
+Patterns covered: edge function (local + production), RPC, CRUD, RLS, schema drift.
 ```

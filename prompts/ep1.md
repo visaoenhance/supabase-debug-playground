@@ -155,7 +155,7 @@ Restore known-good state before closing.
 >
 > If you want your Cursor, Claude Code, or Copilot agent to run this validation automatically after every edge function deploy — so it confirms HTTP 200 and request_id before telling you it's done — here's the prompt. Paste it into your project instructions."
 >
-> [show Replay Prompt on screen]
+> [show Embed Skill Prompt on screen]
 >
 > "Next episode: RPC debugging — when your database function exists but returns the wrong shape and the client sees nothing useful."
 
@@ -189,13 +189,32 @@ Body        : { ok: true, request_id: "...", echo: { ... } }
 
 ---
 
+## References
+
+- [Environment Variables / Secrets](https://supabase.com/docs/guides/functions/secrets) — `Deno.env.get()` and local dev secrets
+- [Error Handling](https://supabase.com/docs/guides/functions/error-handling) — structured try/catch and error responses
+- [Logging](https://supabase.com/docs/guides/functions/logging) — reading the `supabase functions serve` output
+- [Troubleshooting](https://supabase.com/docs/guides/functions/troubleshooting) — common edge function errors
+
+---
+
 ## Replay Prompt
 
 > Paste this into Cursor, Claude Code, or Copilot agent mode to replay this episode autonomously.
 
 ```
-You are debugging a Supabase edge function that returns HTTP 500 with an empty body.
+You are helping debug a Supabase edge function that returns HTTP 500 with an empty body.
 The functions server is already running locally (supabase functions serve --no-verify-jwt).
+
+** STOP — do not run any commands yet. **
+
+Read the plan below, then ask the user:
+  "Ready to go? Reply 'run' to have me execute each step, or 'terminal' if you'd
+   prefer to run the commands yourself and I'll guide you through them."
+
+Wait for the user's reply before doing anything.
+
+---
 
 Available commands:
   pnpm ep1:reset    — restore known-good index.ts from git
@@ -204,17 +223,34 @@ Available commands:
   pnpm ep1:fix      — apply the annotated fix
   pnpm ep1:verify   — assert HTTP 200 + body.ok === true + request_id present
 
-Workflow:
-1. Run ep1:reset, then ep1:break to reach a known broken state
-2. Run ep1:run — confirm HTTP 500 with empty body and no request_id
-3. Check the supabase functions serve terminal for the server-side error
-4. Run ep1:fix to apply the fix
-5. Run ep1:run — confirm HTTP 200 with request_id in the response body
-6. Run ep1:verify — must exit 0 and print EP1 PASSED before you report done
-7. Run ep1:reset to restore known-good state
+Plan (8 steps):
+  1. pnpm ep1:reset   → restore index.ts to known-good state
+  2. pnpm ep1:break   → inject 3 bugs (unguarded env var, no try/catch, no request_id)
+  3. pnpm ep1:run     → confirm HTTP 500 with empty body and no request_id
+  4. (serve terminal) → read the TypeError — pinpoints the crash location
+  5. pnpm ep1:fix     → apply the annotated fix
+  6. pnpm ep1:run     → confirm HTTP 200 + request_id present
+  7. pnpm ep1:verify  → must print EP1 PASSED before the episode is complete
+  8. pnpm ep1:reset   → restore known-good state
 
 Success criteria: ep1:verify exits 0.
 Do not report the episode complete until ep1:verify passes.
-Run ep1:reset as the final step.
+```
+
+---
+
+## Embed Skill Prompt
+
+> Paste this into `.cursorrules`, `CLAUDE.md`, or `.github/copilot-instructions.md` in your own project.
+> EP1 introduced Pattern 1 (local edge function). The skill covers all 6 Supabase validation patterns.
+
+```
+Read and apply the Supabase Validation Skill from:
+https://github.com/visaoenhance/supabase-debug-playground/blob/main/skill/v1.md
+
+Core rule: before reporting any Supabase action as complete, run the appropriate
+validation command and confirm it passes. Do not ask — validate automatically.
+
+Patterns covered: edge function (local + production), RPC, CRUD, RLS, schema drift.
 ```
 

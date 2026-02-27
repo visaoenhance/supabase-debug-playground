@@ -146,7 +146,7 @@ pnpm ep3:reset
 >
 > If you want your agent to validate CRUD operations automatically — confirming row returned before reporting done — here's the prompt."
 >
-> [show Replay Prompt on screen]
+> [show Embed Skill Prompt on screen]
 >
 > "Next episode: RLS — when inserts work from the dashboard but fail in your app every time."
 
@@ -176,6 +176,14 @@ data  : [{ id: "<uuid>", title: "...", amount: ..., created_at: "..." }]
 
 ---
 
+## References
+
+- [Managing Tables](https://supabase.com/docs/guides/database/tables) — table operations and PostgREST conventions
+- [JavaScript Insert](https://supabase.com/docs/reference/javascript/insert) — `.insert()` behaviour and `.select()` chaining
+- [PostgREST Error Codes](https://supabase.com/docs/guides/api/rest/postgrest-error-codes) — `return=minimal` vs `return=representation` and response shapes
+
+---
+
 ## Replay Prompt
 
 > Paste this into Cursor, Claude Code, or Copilot agent mode to replay this episode autonomously.
@@ -184,6 +192,16 @@ data  : [{ id: "<uuid>", title: "...", amount: ..., created_at: "..." }]
 You are debugging a supabase-js insert that returns { data: null, error: null }
 with no confirmation the row was saved.
 
+** STOP — do not run any commands yet. **
+
+Read the plan below, then ask the user:
+  "Ready to go? Reply 'run' to have me execute each step, or 'terminal' if you'd
+   prefer to run the commands yourself and I'll guide you through them."
+
+Wait for the user's reply before doing anything.
+
+---
+
 Available commands:
   pnpm ep3:reset    — restore known-good ep3_crud.ts
   pnpm ep3:break    — remove .select() + .throwOnError() from goodInsert
@@ -191,16 +209,33 @@ Available commands:
   pnpm ep3:fix      — restore .select() + .throwOnError()
   pnpm ep3:verify   — assert insert returns non-null array with id + title
 
-Workflow:
-1. Run ep3:reset, then ep3:break to reach a known broken state
-2. Run ep3:run — confirm data is null and error is null
-3. Open scripts/ep3_crud.ts and find goodInsert — confirm .select() and .throwOnError() are missing
-4. Run ep3:fix to restore both method chains
-5. Run ep3:run — confirm data is a non-null array containing a row with id
-6. Run ep3:verify — must exit 0 and print EP3 PASSED before you report done
-7. Run ep3:reset to restore known-good state
+Plan (8 steps):
+  1. pnpm ep3:reset   → restore known-good ep3_crud.ts
+  2. pnpm ep3:break   → remove .select() + .throwOnError() from goodInsert
+  3. pnpm ep3:run     → confirm data is null and error is null
+  4. (open file)      → scripts/ep3_crud.ts — find goodInsert, confirm missing chains
+  5. pnpm ep3:fix     → restore .select() + .throwOnError()
+  6. pnpm ep3:run     → confirm data is a non-null array containing a row with id
+  7. pnpm ep3:verify  → must print EP3 PASSED before the episode is complete
+  8. pnpm ep3:reset   → restore known-good state
 
 Success criteria: ep3:verify exits 0.
 Do not report the episode complete until ep3:verify passes.
-Run ep3:reset as the final step.
+```
+
+---
+
+## Embed Skill Prompt
+
+> Paste this into `.cursorrules`, `CLAUDE.md`, or `.github/copilot-instructions.md` in your own project.
+> EP3 introduced Pattern 4 (CRUD). The skill covers all 6 Supabase validation patterns.
+
+```
+Read and apply the Supabase Validation Skill from:
+https://github.com/visaoenhance/supabase-debug-playground/blob/main/skill/v1.md
+
+Core rule: before reporting any Supabase action as complete, run the appropriate
+validation command and confirm it passes. Do not ask — validate automatically.
+
+Patterns covered: edge function (local + production), RPC, CRUD, RLS, schema drift.
 ```

@@ -156,11 +156,13 @@ pnpm ep6:reset
 
 > "Six episodes, six debugging patterns. Each one is a command your agent can run to validate a Supabase action before telling you it's done.
 >
-> Here's the EP6 replay prompt — and at the end I'll show you where all six fit together as a single skill you can drop into any project."
+> Here's the EP6 replay prompt — then the embed skill prompt to give your agent production deploy validation permanently."
 >
 > [show Replay Prompt on screen]
 >
-> "The full Supabase Validation Skill is in `docs/supabase-skill/` — use it in your `.cursorrules`, `CLAUDE.md`, or Copilot instructions. Your agent will validate before it reports done."
+> [show Embed Skill Prompt on screen]
+>
+> "The full 6-pattern Supabase Validation Skill is in `skill/v1.md` — drop the entire file into your `.cursorrules`, `CLAUDE.md`, or Copilot instructions. Your agent will validate before it reports done."
 
 ---
 
@@ -186,6 +188,15 @@ Body        : { ok: true, request_id: "...", echo: { ... } }
 
 ---
 
+## References
+
+- [Deploy to Production](https://supabase.com/docs/guides/functions/deploy) — `supabase functions deploy` steps and CI/CD setup
+- [Environment Variables / Secrets](https://supabase.com/docs/guides/functions/secrets) — production secrets management
+- [Logging](https://supabase.com/docs/guides/functions/logging) — dashboard log access for production functions
+- [Troubleshooting](https://supabase.com/docs/guides/functions/troubleshooting) — production error patterns
+
+---
+
 ## Replay Prompt
 
 > Paste this into Cursor, Claude Code, or Copilot agent mode to replay this episode autonomously.
@@ -193,6 +204,16 @@ Body        : { ok: true, request_id: "...", echo: { ... } }
 ```
 You are debugging a Supabase edge function deployed to production that returns HTTP 500.
 The .env file contains SUPABASE_PROJECT_REF, SUPABASE_ACCESS_TOKEN, PROD_SUPABASE_URL, PROD_SUPABASE_ANON_KEY.
+
+** STOP — do not run any commands yet. **
+
+Read the plan below, then ask the user:
+  "Ready to go? Reply 'run' to have me execute each step, or 'terminal' if you'd
+   prefer to run the commands yourself and I'll guide you through them."
+
+Wait for the user's reply before doing anything.
+
+---
 
 Available commands:
   pnpm ep6:reset    — deploy known-good echo to production
@@ -204,16 +225,33 @@ Available commands:
 Production log visibility: dashboard only — no supabase functions logs CLI command exists.
   https://supabase.com/dashboard/project/<SUPABASE_PROJECT_REF>/functions/echo/logs
 
-Workflow:
-1. Run ep6:reset, then ep6:break to deploy the broken version to production
-2. Run ep6:run — confirm HTTP 500 with "Internal Server Error" and no request_id
-3. Check dashboard logs for the TypeError
-4. Run ep6:fix to deploy the fixed version
-5. Run ep6:run — confirm HTTP 200 with request_id in response body
-6. Run ep6:verify — must exit 0 and print EP6 PASSED before you report done
-7. Run ep6:reset to redeploy known-good version
+Plan (8 steps):
+  1. pnpm ep6:reset   → deploy known-good echo to production
+  2. pnpm ep6:break   → deploy broken echo to production
+  3. pnpm ep6:run     → confirm HTTP 500 with "Internal Server Error" and no request_id
+  4. (dashboard)      → check production logs for the TypeError
+  5. pnpm ep6:fix     → deploy fixed echo to production
+  6. pnpm ep6:run     → confirm HTTP 200 with request_id in response body
+  7. pnpm ep6:verify  → must print EP6 PASSED before the episode is complete
+  8. pnpm ep6:reset   → redeploy known-good version
 
 Success criteria: ep6:verify exits 0.
 Do not report the episode complete until ep6:verify passes.
-Run ep6:reset as the final step.
+```
+
+---
+
+## Embed Skill Prompt
+
+> Paste this into `.cursorrules`, `CLAUDE.md`, or `.github/copilot-instructions.md` in your own project.
+> EP6 introduced Pattern 2 (production edge function). The skill covers all 6 Supabase validation patterns.
+
+```
+Read and apply the Supabase Validation Skill from:
+https://github.com/visaoenhance/supabase-debug-playground/blob/main/skill/v1.md
+
+Core rule: before reporting any Supabase action as complete, run the appropriate
+validation command and confirm it passes. Do not ask — validate automatically.
+
+Patterns covered: edge function (local + production), RPC, CRUD, RLS, schema drift.
 ```
