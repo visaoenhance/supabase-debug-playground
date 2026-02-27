@@ -1,10 +1,6 @@
 # EP6 — Local to Production
 ## Guided episode prompt — paste this entire file into a fresh chat to begin
 
-> **TODO (not yet recorded):**
-> - EP6 has not been run end-to-end yet — validate the full break → run → fix → verify → reset flow before recording
-> - See RECORDING.md for EP6 pre-flight requirements (real Supabase project + 4 env vars)
-
 ---
 
 ## Role

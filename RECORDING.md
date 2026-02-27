@@ -116,9 +116,6 @@ pnpm epN:reset        # clean up before ending recording
 
 ### EP6 — Local to Production
 
-> **TODO:** EP6 not yet validated end-to-end. Run the full flow before recording:
-> `ep6:reset → ep6:break → ep6:run → ep6:fix → ep6:run → ep6:verify → ep6:reset`
-
 - **Requires a real Supabase project** — run this to auto-fill `.env` (only needs project ref + access token):
   ```bash
   pnpm setup:ep6:env

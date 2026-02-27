@@ -104,8 +104,8 @@ ok("Local index.ts restored — production has the broken version, local is unch
 log("");
 log("Next steps:");
 log("  1. pnpm ep6:run    — reproduce the 500 failure against the production URL");
-log("  2. Check production logs:");
-log(c.cyan(`     supabase functions logs echo --project-ref ${PROJECT_REF}`));
+log("  2. Check production logs (no CLI — use the dashboard):");
+log(c.cyan(`     https://supabase.com/dashboard/project/${PROJECT_REF}/functions/echo/logs`));
 log("  3. pnpm ep6:fix    — deploy the fixed version");
 log("  4. pnpm ep6:run    — confirm HTTP 200 + request_id");
 log("  5. pnpm ep6:verify");
