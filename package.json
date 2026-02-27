@@ -38,6 +38,12 @@
     "ep5:run":    "tsx scripts/ep5_schema_drift.ts run",
     "ep5:verify": "tsx scripts/episodes/ep5/verify.ts",
 
+    "ep1:prompt": "pbcopy < prompts/ep1.md && echo 'EP1 prompt copied to clipboard — paste into a new chat'",
+    "ep2:prompt": "pbcopy < prompts/ep2.md && echo 'EP2 prompt copied to clipboard — paste into a new chat'",
+    "ep3:prompt": "pbcopy < prompts/ep3.md && echo 'EP3 prompt copied to clipboard — paste into a new chat'",
+    "ep4:prompt": "pbcopy < prompts/ep4.md && echo 'EP4 prompt copied to clipboard — paste into a new chat'",
+    "ep5:prompt": "pbcopy < prompts/ep5.md && echo 'EP5 prompt copied to clipboard — paste into a new chat'",
+
     "ep:runbook": "tsx scripts/runbook.ts",
 
     "reset:code": "git checkout -- . && git clean -fd && echo 'Code reset: all tracked file changes reverted'",
