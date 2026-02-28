@@ -224,7 +224,7 @@ Do not report the episode complete until ep2:verify passes.
 
 ```
 Read and apply the Supabase Validation Skill from:
-https://github.com/visaoenhance/supabase-debug-playground/blob/main/skill/v1.md
+https://github.com/visaoenhance/supabase-debug-playground/blob/main/skills/supabase-validation/SKILL.md
 
 Core rule: before reporting any Supabase action as complete, run the appropriate
 validation command and confirm it passes. Do not ask — validate automatically.
