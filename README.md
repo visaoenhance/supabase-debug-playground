@@ -4,13 +4,13 @@ A **6-episode video series** repo demonstrating common Supabase debugging scenar
 Each episode has a **reset → break → run → fix → verify** workflow you can execute entirely from the terminal — no dashboard required.
 
 > **Scope**: this repo runs entirely **locally** against a Docker-based Supabase stack — no cloud project or Supabase account required.  
-> The debugging concepts (RLS, RPC errors, schema drift, CRUD footguns, edge function logging) apply equally to cloud projects. The Supabase Validation Skill (`skill/v1.md`) is the portable component — see [Using the Validation Skill in Your Own Project](#using-the-validation-skill-in-your-own-project).
+> The debugging concepts (RLS, RPC errors, schema drift, CRUD footguns, edge function logging) apply equally to cloud projects. The Supabase Validation Skill (`skills/supabase-validation/SKILL.md`) is the portable component — see [Using the Validation Skill in Your Own Project](#using-the-validation-skill-in-your-own-project).
 
 ---
 
 ## ⚠ Disclaimer — No Warranty
 
-This repository and its associated skill (`skill/v1.md`) are provided as-is, without warranty of any kind.
+This repository and its associated skill (`skills/supabase-validation/SKILL.md`) are provided as-is, without warranty of any kind.
 
 - This code may modify databases, policies, migrations, or deployed functions.
 - You are responsible for understanding the environment (local, staging, production) before executing any command.
@@ -28,7 +28,7 @@ Supabase failures are often silent. A policy change, a schema drift, or a miscon
 
 This repo encodes a validation-first contract: every Supabase action has a defined pass condition, and done means the pass condition was confirmed — not that the code was written.
 
-The episodes demonstrate real failure modes. The skill (`skill/v1.md`) captures the patterns as an agent-enforceable standard you can drop into any project.
+The episodes demonstrate real failure modes. The skill (`skills/supabase-validation/SKILL.md`) captures the patterns as an agent-enforceable standard you can drop into any project. See `docs-public/SKILLS_METHODOLOGY.md` for the full annotated reference.
 
 ---
 
@@ -79,8 +79,12 @@ supabase-debug-playground/
 ├── package.json
 ├── tsconfig.json
 │
-├── skill/
-│   └── v1.md                     ← Supabase Validation Skill — drop into .cursorrules / CLAUDE.md
+├── skills/
+│   └── supabase-validation/
+│       └── SKILL.md              ← installable Supabase Validation Skill (Agent Skills standard)
+│
+├── docs-public/
+│   └── SKILLS_METHODOLOGY.md    ← full annotated skill reference + playground methodology
 │
 ├── prompts/                      ← episode briefs + replay prompts for each episode
 │   ├── ep1.md
@@ -387,14 +391,21 @@ Response body: "Internal Server Error"
 
 ## Supabase Validation Skill
 
-[`skill/v1.md`](skill/v1.md) is a standalone agent instruction encoding the principle: **before reporting any Supabase action as complete, run the appropriate validation and confirm it passes.**
+[`skills/supabase-validation/SKILL.md`](skills/supabase-validation/SKILL.md) is a standalone, installable agent skill encoding the principle: **before reporting any Supabase action as complete, run the appropriate validation and confirm it passes.**
 
 Drop it into your project's agent context file:
 - **Cursor**: `.cursorrules`
 - **Claude Code**: `CLAUDE.md`
 - **Copilot**: `.github/copilot-instructions.md`
 
+Or install via the Agent Skills standard:
+```bash
+npx skills add visaoenhance/supabase-debug-playground
+```
+
 The skill covers all 6 patterns introduced in this series: edge functions (local + prod), RPC, CRUD, RLS, and schema drift.
+
+For the full annotated reference including playground methodology, see [`docs-public/SKILLS_METHODOLOGY.md`](docs-public/SKILLS_METHODOLOGY.md).
 
 ---
 
@@ -445,7 +456,9 @@ All local Supabase commands require Docker Desktop to be running.
 
 ## Using the Validation Skill in Your Own Project
 
-This repository is a local teaching harness. The portable component is the Supabase Validation Skill (`skill/v1.md`). Drop that file into your project's agent context to enforce validation discipline automatically.
+This repository is a local teaching harness. The portable component is the Supabase Validation Skill ([`skills/supabase-validation/SKILL.md`](skills/supabase-validation/SKILL.md)). Drop that file into your project's agent context to enforce validation discipline automatically.
+
+For deeper context on the methodology and how the skill relates to the playground episodes, see [`docs-public/SKILLS_METHODOLOGY.md`](docs-public/SKILLS_METHODOLOGY.md).
 
 The patterns, prompts, and verify scripts are also portable. Here is what maps across:
 
