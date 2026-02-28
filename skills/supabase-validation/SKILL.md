@@ -121,11 +121,13 @@ until the environment type is confirmed.
   explicit "yes, proceed" before executing anything that writes or modifies schema
 - If environment cannot be determined — treat as production; do not execute
 
-**No Environment Assumptions:** The agent must never infer environment type from
-file presence alone — the existence of `.env`, `supabase/config.toml`, or a
-`supabase/` directory does not confirm the environment is local. Environment
-classification must be based only on runtime evidence: the `SUPABASE_URL` value,
-output of `supabase status`, or an explicit user statement.
+**No Environment Assumptions (see also Rule G):** The agent must never infer
+environment type from file presence alone — the existence of `.env`,
+`supabase/config.toml`, or a `supabase/` directory does not confirm the
+environment is local. Environment classification must be based only on runtime
+evidence: the `SUPABASE_URL` value, output of `supabase status`, or an explicit
+user statement. Rule G extends this constraint to all tasks, including read-only
+inspection — not only pre-action gates.
 
 ---
 
@@ -230,6 +232,37 @@ The agent must not hallucinate access it doesn't have.
 displaced.
 **Requires confirmation:** modifying or deleting any existing file under
 `supabase/`.
+
+---
+
+## Rule G — No Hidden Context Assumption
+
+The agent must not infer Supabase project configuration from local file presence
+alone. The existence of `.env`, `supabase/config.toml`, or a `supabase/`
+directory does not confirm which project is active, whether it is local or
+remote, or whether the configuration applies to the current task.
+
+**Environment classification must be based only on runtime evidence:**
+- The resolved value of `SUPABASE_URL` (from the active shell environment — not
+  a `.env` file the agent reads in isolation)
+- Output of `supabase status` or `supabase projects list`
+- An explicit user statement (e.g., "I'm working against our staging project")
+
+**What this prevents:**
+- A skill applied inside a monorepo where a `supabase/` folder exists but
+  belongs to a different sub-project
+- An agent assuming `local` because it sees `http://localhost` in a `.env` file
+  that may be stale or inactive
+- Hallucinated project context: "this looks like a local project" based on file
+  presence alone
+
+**Required agent phrasing:** "I can see a `supabase/` directory and a `.env`
+file. To classify the environment I need to confirm the active `SUPABASE_URL`.
+Running `supabase status`…" — not "This looks like a local project."
+
+**Relationship to Rule A:** Rule G governs what the agent may *assume* at any
+point, including read-only tasks. Rule A governs what the agent must *confirm
+before acting*. Rule G is the precondition; Rule A is the gate.
 
 ---
 

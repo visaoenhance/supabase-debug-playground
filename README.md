@@ -403,6 +403,8 @@ Or install via the Agent Skills standard:
 npx skills add visaoenhance/supabase-debug-playground
 ```
 
+> This installs only the validation skill — not the playground scripts or reset/break commands.
+
 The skill covers all 6 patterns introduced in this series: edge functions (local + prod), RPC, CRUD, RLS, and schema drift.
 
 For the full annotated reference including playground methodology, see [`docs-public/SKILLS_METHODOLOGY.md`](docs-public/SKILLS_METHODOLOGY.md).
