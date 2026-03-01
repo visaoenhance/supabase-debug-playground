@@ -1,9 +1,10 @@
 # Supabase Debug Playground
 
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Security](https://img.shields.io/badge/security-policy-blue)
+![Built for Supabase](https://img.shields.io/badge/built%20for-Supabase-3ECF8E)
+![Validation First](https://img.shields.io/badge/validation-No%20Evidence.%20Not%20done.-black)
 
-A **6-episode video series** repo demonstrating common Supabase debugging scenarios.  
+A **6-episode video series** repo demonstrating common [Supabase](https://supabase.com/) debugging scenarios.  
 Each episode has a **reset → break → run → fix → verify** workflow you can execute entirely from the terminal — no dashboard required.
 
 > **Scope**: this repo runs entirely **locally** against a Docker-based Supabase stack — no cloud project or Supabase account required.  
@@ -523,3 +524,9 @@ PRs welcome!  Each episode is isolated to one script file and one SQL change —
 ## License
 
 MIT
+
+---
+
+## About
+
+Built by Emilio Taylor (Visao LLC) — https://visaoenhance.com
