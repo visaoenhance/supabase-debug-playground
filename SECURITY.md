@@ -1,17 +1,16 @@
 # Security Policy
 
-Thank you for helping keep supabase-debug-playground secure.
+Thank you for helping keep **supabase-debug-playground** secure.
 
-This repository demonstrates validation patterns and debugging discipline for Supabase environments. While it is a demo and learning repository, we take security concerns seriously.
+This repository demonstrates validation patterns and debugging discipline for Supabase environments. While it is a demo/learning repo, we take security reports seriously.
 
 ---
 
 ## Supported Versions
 
-This repository is maintained on the `main` branch.
+This repository is maintained on the `main` branch only.
 
-Security updates and dependency updates are applied via:
-
+Security and dependency updates may be applied via:
 - Dependabot
 - CodeQL scanning
 - GitHub Secret Scanning
@@ -22,33 +21,32 @@ Security updates and dependency updates are applied via:
 
 If you discover a security vulnerability:
 
-Please do **NOT** open a public issue.
+**Please do NOT open a public issue.**
 
 Instead, report it via one of the following:
-
-- GitHub Private Vulnerability Reporting (preferred)
-- Email: info@visaoenhance.com
+- **GitHub Private Vulnerability Reporting** (preferred)
+- **Email:** info@visaoenhance.com
 
 When reporting, please include:
-
 - Description of the vulnerability
-- Steps to reproduce
+- Steps to reproduce (proof-of-concept if available)
 - Impact assessment
 - Suggested remediation (if known)
 
-You will receive acknowledgment within 48 hours.
+**Response expectations**
+- Acknowledgement within **48 hours**
+- A status update within **7 days** (or sooner if critical)
 
 ---
 
 ## Scope
 
 This repository:
+- Does **not** store production credentials.
+- Does **not** ship production infrastructure.
+- Is intended for **local Supabase development** and validation experimentation.
 
-- Does NOT store production credentials.
-- Does NOT ship production infrastructure.
-- Is intended for local Supabase development and validation experimentation.
-
-If a vulnerability impacts the Supabase platform itself, please report it directly to Supabase via their responsible disclosure program.
+If a vulnerability impacts the **Supabase platform itself**, please report it directly to Supabase via their responsible disclosure process.
 
 ---
 
@@ -56,13 +54,12 @@ If a vulnerability impacts the Supabase platform itself, please report it direct
 
 This project promotes a validation-first approach:
 
-> No Evidence. Not done.
+> **No Evidence. Not done.**
 
 Coding assistants and agents should:
-
-- Prove database writes
-- Validate RLS across roles
-- Confirm schema alignment
+- Prove database writes (return rows/IDs)
+- Validate RLS across roles (anon/auth/service)
+- Confirm schema ↔ types alignment
 - Never assume success without evidence
 
 Security is not a feature. It is a discipline.
