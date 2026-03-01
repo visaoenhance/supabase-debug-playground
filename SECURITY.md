@@ -27,7 +27,7 @@ Please do **NOT** open a public issue.
 Instead, report it via one of the following:
 
 - GitHub Private Vulnerability Reporting (preferred)
-- Email: security@visaoenhance.com
+- Email: info@visaoenhance.com
 
 When reporting, please include:
 
