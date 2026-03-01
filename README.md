@@ -1,5 +1,8 @@
 # Supabase Debug Playground
 
+![License](https://img.shields.io/badge/license-MIT-green)
+![Security](https://img.shields.io/badge/security-policy-blue)
+
 A **6-episode video series** repo demonstrating common Supabase debugging scenarios.  
 Each episode has a **reset → break → run → fix → verify** workflow you can execute entirely from the terminal — no dashboard required.
 
