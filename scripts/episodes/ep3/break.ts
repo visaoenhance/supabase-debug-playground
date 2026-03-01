@@ -24,8 +24,8 @@ const TARGET = join(process.cwd(), "scripts", "ep3_crud.ts");
 const FROM = `  const { data, error } = await supabase
     .from("receipts")
     .insert({ title, amount })
-    .select()          // ✔ returns the inserted row(s)
-    .throwOnError();   // ✔ throws immediately on any DB error`;
+    .select()          // ✅ FIX: returns the inserted row(s) — data will not be null
+    .throwOnError();   // ✅ FIX: throws on any DB error — no more silent failures`;
 
 const TO = `  // ❌ BREAK: .select() and .throwOnError() removed — spot the bug!
   const { data, error } = await supabase
