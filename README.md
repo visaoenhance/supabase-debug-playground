@@ -4,6 +4,60 @@
 ![Built for Supabase](https://img.shields.io/badge/built%20for-Supabase-3ECF8E)
 ![Validation First](https://img.shields.io/badge/validation-No%20Evidence.%20Not%20done.-black)
 
+A **10-episode** series of executable debugging scenarios for [Supabase](https://supabase.com/), designed to teach real-world debugging patterns through hands-on practice.
+
+This repository accompanies the **de[Coded] engineering series** on the [learn2enhance YouTube channel](https://www.youtube.com/@learn2enhance), where real development problems are explored and solved with practical demonstrations.
+
+---
+
+## 🎥 Demo Walkthrough
+
+Watch the walkthrough of the first debugging scenarios in the Supabase Debug Playground.
+
+[![Supabase Debug Playground Demo](https://img.youtube.com/vi/fTAsFD1dz5w/maxresdefault.jpg)](https://youtu.be/fTAsFD1dz5w)
+
+This demo covers several real Supabase debugging scenarios including:
+
+- Authentication issues
+- Row Level Security (RLS) policy failures
+- Realtime subscription debugging
+- RPC authentication context issues
+- Query performance and indexing
+
+> This demo is part of the **de[Coded] series** on the [learn2enhance YouTube channel](https://www.youtube.com/@learn2enhance), where real engineering problems are explored and solved step-by-step using modern developer tools.
+
+---
+
+## 🎯 What You'll Learn
+
+This playground helps you master common Supabase debugging scenarios:
+
+- **Diagnosing broken RLS policies** — understand why queries return empty results despite proper authentication
+- **Debugging authentication and session problems** — trace auth context through queries and RPC calls
+- **Troubleshooting Supabase Realtime subscriptions** — verify publication configurations and event delivery
+- **Understanding RPC authentication context** — ensure secure function execution with proper role validation
+- **Identifying missing database indexes** — read execution plans and optimize query performance
+- **Analyzing query performance with EXPLAIN** — distinguish sequential scans from index scans on large tables
+- **Validating edge function deployments** — confirm local and production functions return expected responses
+- **Detecting schema drift** — keep TypeScript types in sync with database migrations
+
+Each episode demonstrates a **broken state → the fix → verification → reusable debugging patterns** you can apply to your own projects.
+
+---
+
+## 📚 Repository Purpose
+
+Supabase failures are often silent. A policy change, a schema drift, or a misconfigured edge function can appear to succeed while breaking something else entirely. Validation is frequently skipped — or agents report success before anything has been verified.
+
+This repository serves as a **reproducible debugging playground** for common Supabase issues. Each episode:
+
+- Introduces a realistic failure mode
+- Provides diagnostic steps to identify root causes
+- Demonstrates the fix with observable validation
+- Encodes the pattern as a reusable skill
+
+The validation patterns are extracted into a portable agent skill (see below) that you can install in any project to enforce evidence-based confirmation of Supabase operations.
+
 ---
 
 ## Supabase Validation Skill
@@ -72,13 +126,13 @@ This repository is intended for educational and debugging pattern demonstration 
 
 ---
 
-## Why This Exists
+## Core Principle: No Evidence. Not done.
 
-Supabase failures are often silent. A policy change, a schema drift, or a misconfigured edge function can appear to succeed while breaking something else entirely. Validation is frequently skipped — or agents report success before anything has been verified.
+This repo encodes a **validation-first contract**: every Supabase action has a defined pass condition, and "done" means the pass condition was confirmed — not just that the code was written.
 
-This repo encodes a validation-first contract: every Supabase action has a defined pass condition, and done means the pass condition was confirmed — not that the code was written.
+The episodes demonstrate real failure modes. The skill captures the patterns as an agent-enforceable standard you can drop into any project. 
 
-The episodes demonstrate real failure modes. The skill captures the patterns as an agent-enforceable standard you can drop into any project. See [`docs-public/SKILLS_METHODOLOGY.md`](docs-public/SKILLS_METHODOLOGY.md) for the full annotated reference.
+See [`docs-public/SKILLS_METHODOLOGY.md`](docs-public/SKILLS_METHODOLOGY.md) for the full annotated reference.
 
 ---
 
