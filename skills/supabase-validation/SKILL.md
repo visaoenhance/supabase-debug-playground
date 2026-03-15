@@ -6,6 +6,17 @@ compatibility: "Compatible with Cursor, Claude Code, and GitHub Copilot agent mo
 metadata:
   author: visaoenhance
   version: "1.1.0"
+references:
+  - references/pattern-01-edge-function-local.md
+  - references/pattern-02-edge-function-production.md
+  - references/pattern-03-rpc.md
+  - references/pattern-04-crud-insert.md
+  - references/pattern-05-rls.md
+  - references/pattern-06-schema-migration.md
+  - references/pattern-07-auth-gated-query.md
+  - references/pattern-08-realtime-subscription.md
+  - references/pattern-09-rpc-auth-context.md
+  - references/pattern-10-query-performance.md
 ---
 
 > **This skill is safe for use in any project.**
@@ -341,357 +352,88 @@ It is complete only when the validation step passes.
 
 ## Pattern 1 — Edge Function (Local)
 
-**Trigger:** after any change to a Supabase edge function running locally via
-`supabase functions serve`.
+> Full detail: [`references/pattern-01-edge-function-local.md`](references/pattern-01-edge-function-local.md)
 
-**Validation steps:**
-1. POST to `http://localhost:54321/functions/v1/<name>`
-2. Assert HTTP 200
-3. Assert response body is valid JSON with `ok: true`
-4. Assert `request_id` is present in the response body
-
-**Fail signal:** HTTP 500, empty body, no `request_id`, or
-`Deno.env.get(...)` returning `undefined`.
-
-**Diagnostic:** errors stream to the `supabase functions serve` terminal —
-read them directly. There is no `supabase functions logs` command for local dev.
-
-**Docs:**
-- [Environment Variables / Secrets](https://supabase.com/docs/guides/functions/secrets)
-- [Error Handling](https://supabase.com/docs/guides/functions/error-handling)
-- [Logging](https://supabase.com/docs/guides/functions/logging)
-- [Troubleshooting](https://supabase.com/docs/guides/functions/troubleshooting)
-
-**Do not report done until:** HTTP 200 + `ok: true` + `request_id` confirmed.
+**Trigger:** change to a function running via `supabase functions serve`
+**Done when:** HTTP 200 + `ok: true` + `request_id` confirmed
 
 ---
 
 ## Pattern 2 — Edge Function (Production)
 
-**Trigger:** after `supabase functions deploy <name>` to a real Supabase project.
+> Full detail: [`references/pattern-02-edge-function-production.md`](references/pattern-02-edge-function-production.md)
 
-**Validation steps:**
-1. POST to `$SUPABASE_URL/functions/v1/<name>` with
-   `Authorization: Bearer $SUPABASE_ANON_KEY` (do not print the key value)
-2. Assert HTTP 200
-3. Assert response body is valid JSON with `ok: true`
-4. Assert `request_id` is present in the response body
-
-**Fail signal:** HTTP 500 or unstructured body.
-
-**Diagnostic:** dashboard function logs:
-`https://supabase.com/dashboard/project/<PROJECT_REF>/functions/<name>/logs`
-
-**Docs:**
-- [Deploy to Production](https://supabase.com/docs/guides/functions/deploy)
-- [Environment Variables / Secrets](https://supabase.com/docs/guides/functions/secrets)
-- [Logging](https://supabase.com/docs/guides/functions/logging)
-- [Troubleshooting](https://supabase.com/docs/guides/functions/troubleshooting)
-
-**Do not report done until:** HTTP 200 + `ok: true` + `request_id` confirmed
-against the production URL.
+**Trigger:** `supabase functions deploy <name>` to a real project
+**Done when:** HTTP 200 + `ok: true` + `request_id` confirmed against production URL
 
 ---
 
 ## Pattern 3 — RPC
 
-**Trigger:** after any `CREATE OR REPLACE FUNCTION` or migration that modifies
-an RPC.
+> Full detail: [`references/pattern-03-rpc.md`](references/pattern-03-rpc.md)
 
-**Validation steps:**
-1. Call via supabase-js: `supabase.rpc('<function_name>', { ...args })`
-2. Assert `error` is null
-3. Assert response data contains the expected fields
-
-**Fail signal:** `error.code` is present — read `error.code`, `error.message`,
-`error.hint` as a unit.
-
-**Diagnostic:** if error code is `42703` (undefined column), run:
-```sql
-SELECT pg_get_functiondef('<schema>.<function_name>(<arg_types>)'::regprocedure);
-```
-
-**Docs:**
-- [Database Functions](https://supabase.com/docs/guides/database/functions)
-- [JavaScript RPC](https://supabase.com/docs/reference/javascript/rpc)
-- [PostgREST Error Codes](https://supabase.com/docs/guides/api/rest/postgrest-error-codes)
-
-**Do not report done until:** RPC returns no error + response shape is correct.
+**Trigger:** `CREATE OR REPLACE FUNCTION` or migration modifying an RPC
+**Done when:** RPC returns no error + response shape is correct
 
 ---
 
 ## Pattern 4 — CRUD / Insert
 
-**Trigger:** after any insert, update, or delete via supabase-js.
+> Full detail: [`references/pattern-04-crud-insert.md`](references/pattern-04-crud-insert.md)
 
-**Validation steps:**
-1. Always chain `.select().throwOnError()` onto the operation
-2. Assert returned `data` is a non-null array
-3. Assert the array contains a row with `id`
-
-**Why this matters:** `.insert()` without `.select()` sends
-`Prefer: return=minimal` — PostgREST returns 204 with empty body. supabase-js
-translates this to `{ data: null, error: null }`. This is not confirmation the
-row was saved.
-
-**Correct pattern:**
-```ts
-const { data } = await supabase
-  .from("table")
-  .insert({ ...values })
-  .select()
-  .throwOnError();
-// data is a non-null array if the insert succeeded
-```
-
-**Docs:**
-- [Managing Tables](https://supabase.com/docs/guides/database/tables)
-- [JavaScript Insert](https://supabase.com/docs/reference/javascript/insert)
-- [PostgREST Error Codes](https://supabase.com/docs/guides/api/rest/postgrest-error-codes)
-
-**Do not report done until:** insert returns a non-null array containing a row
-with `id`.
+**Trigger:** any `.insert()`, `.update()`, `.delete()` via supabase-js
+**Done when:** insert returns a non-null array containing a row with `id`
 
 ---
 
 ## Pattern 5 — RLS
 
-**Trigger:** after any `CREATE POLICY`, `DROP POLICY`,
-`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`, or migration touching RLS.
+> Full detail: [`references/pattern-05-rls.md`](references/pattern-05-rls.md)
 
-**Validation steps — all three must pass:**
-1. **Unauthenticated anon** — attempt the restricted operation with a plain anon
-   key and no auth session → assert blocked (error `42501`)
-2. **Authenticated user** — same operation with anon key + valid JWT → assert
-   allowed
-3. **service_role** — same operation with service_role key → assert allowed
-   (service_role always bypasses RLS)
-
-**Diagnostic commands:**
-```sql
--- See all policies on a table
-SELECT policyname, cmd, qual, with_check
-FROM pg_policies WHERE tablename = '<table>';
-
--- Confirm RLS is enabled
-SELECT relname, relrowsecurity FROM pg_class WHERE relname = '<table>';
-```
-
-**Key insight:** if something works from the Supabase dashboard but fails in the
-app, check whether an INSERT policy exists for the role your app uses.
-`service_role` has `BYPASSRLS` — it skips policy evaluation entirely.
-
-**Docs:**
-- [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Debugging and Monitoring](https://supabase.com/docs/guides/database/inspect)
-- [Hardening the Data API](https://supabase.com/docs/guides/database/hardening-data-api)
-
-**Do not report done until:** all three scenarios produce the expected result.
+**Trigger:** `CREATE POLICY`, `DROP POLICY`, `ENABLE ROW LEVEL SECURITY`
+**Done when:** all 3 scenarios pass — unauthed blocked + authed allowed + service_role allowed
 
 ---
 
 ## Pattern 6 — Schema Migration / Type Drift
 
-**Trigger:** after any migration that adds, removes, or renames a column.
+> Full detail: [`references/pattern-06-schema-migration.md`](references/pattern-06-schema-migration.md)
 
-**Validation steps:**
-1. Run: `supabase gen types typescript --local > supabase/types.gen.ts`
-2. Run: `git diff supabase/types.gen.ts`
-3. If diff is non-empty → expected (new column). Commit the updated file.
-4. If diff is empty and you added a column → migration may not have run — check.
-
-**Drift detection:**
-```sql
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_schema = 'public' AND table_name = '<table>'
-ORDER BY ordinal_position;
-```
-
-**Why this matters:** TypeScript compiles cleanly against stale types. A column
-that exists in the DB but not in `types.gen.ts` is simply invisible to your code
-— no compile error, silent bugs.
-
-**CI:** run `supabase gen types typescript --local > supabase/types.gen.ts &&
-git diff --exit-code supabase/types.gen.ts` after any migration deploy. Fail the
-build if the diff is non-empty.
-
-**Docs:**
-- [Generating TypeScript Types](https://supabase.com/docs/guides/api/rest/generating-types)
-- [Debugging and Monitoring](https://supabase.com/docs/guides/database/inspect)
-- [Local Development](https://supabase.com/docs/guides/cli/local-development)
-
-**Do not report done until:** `types.gen.ts` reflects the current live schema
-and the file is committed.
+**Trigger:** migration adding, removing, or renaming a column
+**Done when:** `types.gen.ts` reflects live schema + file committed
 
 ---
 
 ## Pattern 7 — Auth-Gated Query
 
-**Trigger:** after any change to a table's RLS policies that use `auth.uid()`, or
-after any client-side code that queries such a table.
+> Full detail: [`references/pattern-07-auth-gated-query.md`](references/pattern-07-auth-gated-query.md)
 
-**The 3-state requirement:** `auth.uid()` policies create three distinct
-behaviours that must all be tested — not just the happy path:
-
-| State | Caller | Expected result |
-|---|---|---|
-| No session | Anon key, no JWT | Empty array (or explicit error if a null guard is configured) — no data leaked |
-| Wrong user | Signed-in user who does not own the rows | Empty array — RLS scopes to `auth.uid()` |
-| Owner | Signed-in user who owns the rows | Rows returned |
-
-**Why states 1 and 2 look identical:** both return `[]` with no error — a
-developer cannot tell whether the table is empty, RLS is blocking them, or they
-forgot to sign in. The agent must test all three explicitly.
-
-**Validation steps:**
-1. Confirm `relrowsecurity = t` via `pg_class`
-2. Create two test users via `admin.auth.admin.createUser`
-3. State 1 — query with no session → assert empty array
-4. State 2 — query signed in as the non-owner → assert empty array
-5. State 3 — query signed in as the owner → assert rows returned
-6. Delete test users after validation
-
-**Diagnostic:**
-```sql
-SELECT relname, relrowsecurity FROM pg_class WHERE relname = '<table>';
-SELECT policyname, cmd, qual FROM pg_policies WHERE tablename = '<table>';
-```
-
-**Docs:**
-- [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
-- [Auth Helpers](https://supabase.com/docs/guides/auth)
-
-**Do not report done until:** all 3 auth states produce the expected result.
+**Trigger:** any query on a table with `auth.uid()` RLS policies
+**Done when:** all 3 auth states pass — no session → empty, wrong user → empty, owner → rows
 
 ---
 
 ## Pattern 8 — Realtime Subscription
 
-**Trigger:** after any `ALTER PUBLICATION supabase_realtime ADD TABLE` or
-`DROP TABLE`, or after any change to a table whose changes are observed via
-`supabase.channel(...).on('postgres_changes', ...)` subscriptions.
+> Full detail: [`references/pattern-08-realtime-subscription.md`](references/pattern-08-realtime-subscription.md)
 
-**Root cause of silent failures:** Supabase Realtime uses PostgreSQL logical
-replication. A table must be listed in the `supabase_realtime` publication for
-the WAL stream to include its changes. If the table is absent, subscriptions
-operate normally (`SUBSCRIBED` status), inserts succeed, but events are never
-delivered — no error is raised anywhere.
-
-**Validation steps (strict ordering):**
-1. Confirm table membership:
-   ```sql
-   SELECT tablename FROM pg_publication_tables
-   WHERE pubname = 'supabase_realtime' AND tablename = '<table>';
-   ```
-   If absent → the fix is `ALTER PUBLICATION supabase_realtime ADD TABLE public.<table>`. No client-side code change will fix this.
-2. Register the event listener **before** calling `.subscribe()` — registering
-   after the channel is already subscribed silently drops the callback.
-3. Wait for `SUBSCRIBED` status acknowledgment before inserting.
-4. Insert the row after subscription is confirmed ready.
-5. Assert the INSERT event arrives within a timeout (≥ 5 seconds for local dev).
-6. Always unsubscribe and call `client.realtime.disconnect()` in a `finally` block.
-
-**Fail signal:** event timeout with no error. The subscription appears healthy
-(`SUBSCRIBED`) but events never arrive.
-
-**Diagnostic:**
-```sql
--- Full publication table list
-SELECT pubname, schemaname, tablename FROM pg_publication_tables
-WHERE pubname = 'supabase_realtime';
-```
-
-**Docs:**
-- [Realtime Overview](https://supabase.com/docs/guides/realtime)
-- [Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes)
-
-**Do not report done until:** `pg_publication_tables` confirms membership AND
-an INSERT event is received within timeout.
+**Trigger:** any change to Realtime publication membership or `postgres_changes` subscription
+**Done when:** `pg_publication_tables` confirms membership AND INSERT event received within timeout
 
 ---
 
 ## Pattern 9 — RPC Auth Context
 
-**Trigger:** after any `CREATE OR REPLACE FUNCTION` that references `auth.uid()`
-inside a `SECURITY INVOKER` function body.
+> Full detail: [`references/pattern-09-rpc-auth-context.md`](references/pattern-09-rpc-auth-context.md)
 
-**The null guard requirement:** when no JWT is present, `auth.uid()` returns
-`NULL`. A `WHERE author_id = auth.uid()` clause with no null guard returns an
-empty set with no error — the silent failure mode. An explicit null guard raises
-an actionable error instead.
-
-**Required hardening checks (all four must pass):**
-
-| Check | SQL to verify |
-|---|---|
-| `SECURITY INVOKER` declared | `SELECT prosecdef FROM pg_proc WHERE proname = '<fn>'` — must be `f` |
-| `search_path` set | `SELECT proconfig FROM pg_proc WHERE proname = '<fn>'` — must contain `search_path` |
-| `anon` EXECUTE revoked | `SELECT grantee FROM information_schema.role_routine_grants WHERE routine_name = '<fn>'` — `anon` must not appear |
-| `authenticated` EXECUTE granted | Same query — `authenticated` must appear |
-
-**Validation steps:**
-1. Confirm all four hardening checks via `pg_proc` + `role_routine_grants`
-2. Call the function without a session → assert explicit error (not empty array)
-3. Call the function after `signInWithPassword` → assert rows returned
-
-**Correct null guard pattern:**
-```sql
-IF auth.uid() IS NULL THEN
-  RAISE EXCEPTION 'not authenticated'
-    USING ERRCODE = 'PT401',
-          HINT    = 'Call this function with an authenticated session';
-END IF;
-```
-
-**Grant pattern:**
-```sql
-REVOKE EXECUTE ON FUNCTION public.<fn>() FROM public, anon;
-GRANT  EXECUTE ON FUNCTION public.<fn>() TO authenticated;
-```
-
-**Docs:**
-- [Database Functions](https://supabase.com/docs/guides/database/functions)
-- [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
-
-**Do not report done until:** unauthenticated call returns explicit error + authenticated call returns data + all 4 hardening checks pass.
+**Trigger:** `CREATE OR REPLACE FUNCTION` referencing `auth.uid()` in a SECURITY INVOKER body
+**Done when:** unauthenticated call → explicit error + authenticated call → data + all 4 hardening checks pass
 
 ---
 
 ## Pattern 10 — Query Performance
 
-**Trigger:** after any migration that creates or drops an index, or after any
-report of a slow query on a large table.
+> Full detail: [`references/pattern-10-query-performance.md`](references/pattern-10-query-performance.md)
 
-**Core diagnostic:** run `EXPLAIN (ANALYZE, BUFFERS)` on the representative
-query and assert plan shape — not execution time alone, since timing varies.
-
-**Validation steps:**
-1. Confirm row count is meaningful (≥ 1,000 rows; seed if needed)
-2. Confirm index exists via `pg_indexes`:
-   ```sql
-   SELECT indexname, indexdef FROM pg_indexes WHERE tablename = '<table>';
-   ```
-3. Run `ANALYZE <table>` to ensure planner statistics are current
-4. Run `EXPLAIN (ANALYZE, BUFFERS)` on the query and assert:
-   - With index present: plan contains `Index Scan` (or `Index Only Scan` / `Bitmap Index Scan`) — **not** `Seq Scan`
-   - Without index: plan contains `Seq Scan` (confirms the break state)
-
-**Index direction matters:** for `ORDER BY created_at DESC LIMIT N` queries,
-create the index as `(created_at DESC)` — the planner can then avoid a sort step
-entirely.
-
-**Production note:** use `CREATE INDEX CONCURRENTLY` in production to avoid
-holding an exclusive lock on the table during index creation. This cannot be
-used inside a transaction block.
-
-**Key insight:** a Seq Scan with a small table is normal — the planner chooses
-Seq Scan below its cost threshold regardless of index presence. Use ≥ 1,000
-rows to get a meaningful EXPLAIN result.
-
-**Docs:**
-- [EXPLAIN](https://www.postgresql.org/docs/current/sql-explain.html)
-- [Supabase Indexes](https://supabase.com/docs/guides/database/postgres/indexes)
-- [Debugging and Monitoring](https://supabase.com/docs/guides/database/inspect)
-
-**Do not report done until:** EXPLAIN shows Index Scan on a ≥ 1,000 row table.
+**Trigger:** migration adding or dropping an index, or report of a slow query
+**Done when:** EXPLAIN shows Index Scan (not Seq Scan) on a ≥ 1,000 row table
