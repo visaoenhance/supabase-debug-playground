@@ -66,10 +66,12 @@ Deno.serve(async (req: Request) => {
     );
   } catch (err) {
     // ✅ FIX 2 (continued): structured error response — client gets JSON, not silence.
+    // Log full error server-side for debugging; return a generic message to the client
+    // to avoid leaking internal error details (CWE-209).
     console.error(JSON.stringify({ level: "error", request_id: requestId, error: String(err) }));
 
     return new Response(
-      JSON.stringify({ ok: false, request_id: requestId, error: String(err) }),
+      JSON.stringify({ ok: false, request_id: requestId, error: "Internal server error" }),
       { status: 500, headers: { "Content-Type": "application/json" } },
     );
   }

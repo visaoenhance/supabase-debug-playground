@@ -179,9 +179,9 @@ async function main() {
     log("");
     log("EP6 env vars written:");
     log(c.green(`  SUPABASE_PROJECT_REF   = ${projectRef}`));
-    log(c.green(`  SUPABASE_ACCESS_TOKEN  = ${accessToken.slice(0, 6)}...**hidden**`));
+    log(c.green(`  SUPABASE_ACCESS_TOKEN  = (written to .env)`));
     log(c.green(`  PROD_SUPABASE_URL      = ${prodUrl}`));
-    log(c.green(`  PROD_SUPABASE_ANON_KEY = ${anonKey.slice(0, 6)}...**hidden**`));
+    log(c.green(`  PROD_SUPABASE_ANON_KEY = (written to .env)`));
   }
 
   log("");

@@ -90,11 +90,13 @@ Deno.serve(async (req: Request) => {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    // Log full error server-side for debugging; return a generic message to the client
+    // to avoid leaking internal error details (CWE-209).
     console.error(
       JSON.stringify({ level: "error", request_id: requestId, message })
     );
     return new Response(
-      JSON.stringify({ ok: false, request_id: requestId, error: message }),
+      JSON.stringify({ ok: false, request_id: requestId, error: "Internal server error" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
