@@ -4,17 +4,63 @@
 ![Built for Supabase](https://img.shields.io/badge/built%20for-Supabase-3ECF8E)
 ![Validation First](https://img.shields.io/badge/validation-No%20Evidence.%20Not%20done.-black)
 
-A **6-episode video series** repo demonstrating common [Supabase](https://supabase.com/) debugging scenarios.  
-Each episode has a **reset → break → run → fix → verify** workflow you can execute entirely from the terminal — no dashboard required.
+---
 
-> **Scope**: this repo runs entirely **locally** against a Docker-based Supabase stack — no cloud project or Supabase account required.  
-> The debugging concepts (RLS, RPC errors, schema drift, CRUD footguns, edge function logging) apply equally to cloud projects. The Supabase Validation Skill (`skills/supabase-validation/SKILL.md`) is the portable component — see [Using the Validation Skill in Your Own Project](#using-the-validation-skill-in-your-own-project).
+## Supabase Validation Skill
+
+> **The portable component. Install it once; it works in any project.**
+
+The [`SKILL.md`](SKILL.md) in this repo is a standalone agent skill encoding a single principle:
+
+**No Evidence. Not done.**
+
+Every Supabase action — write, deploy, migrate, fix — is incomplete until observable output confirms it.
+
+Install via the [Agent Skills](https://agentskills.io) standard:
+
+```bash
+npx skills add visaoenhance/supabase-debug-playground
+```
+
+This installs `SKILL.md` and loads all 10 pattern reference files on demand. It does **not** install the playground scripts or reset/break commands.
+
+Drop it into your project's agent context file directly:
+- **Cursor**: `.cursorrules`
+- **Claude Code**: `CLAUDE.md`
+- **GitHub Copilot**: `.github/copilot-instructions.md`
+
+### The 10 Validation Patterns
+
+| # | Pattern | Episode | Done when |
+|---|---------|---------|-----------|
+| 1 | [Edge Function (Local)](references/pattern-01-edge-function-local.md) | EP1 | HTTP 200 + `ok: true` + `request_id` present |
+| 2 | [Edge Function (Production)](references/pattern-02-edge-function-production.md) | EP6 | Same checks against live URL |
+| 3 | [RPC](references/pattern-03-rpc.md) | EP2 | No error + response contains expected data shape |
+| 4 | [CRUD / Insert](references/pattern-04-crud-insert.md) | EP3 | Non-null array with `id` returned (not just exit 0) |
+| 5 | [RLS](references/pattern-05-rls.md) | EP4 | All 3 roles pass: unauthed blocked, authed allowed, service_role allowed |
+| 6 | [Schema Migration / Type Drift](references/pattern-06-schema-migration.md) | EP5 | `types.gen.ts` matches live DB after every migration |
+| 7 | [Auth-Gated Query](references/pattern-07-auth-gated-query.md) | EP7 | All 3 auth states: no session → empty, wrong user → empty, owner → rows |
+| 8 | [Realtime Subscription](references/pattern-08-realtime-subscription.md) | EP8 | `pg_publication_tables` membership confirmed + INSERT event received |
+| 9 | [RPC Auth Context](references/pattern-09-rpc-auth-context.md) | EP9 | Unauthenticated call → explicit error + `anon` execute revoked |
+| 10 | [Query Performance](references/pattern-10-query-performance.md) | EP10 | EXPLAIN shows Index Scan (not Seq Scan) on ≥ 1,000 row table |
+
+Each reference file contains the full trigger definition, step-by-step validation procedure, fail signals, diagnostic SQL, and "done when" gate.
+
+---
+
+## The Playground
+
+A **10-episode** series of executable debugging scenarios for [Supabase](https://supabase.com/).  
+Each episode has a **reset → break → run → fix → verify** workflow you can run entirely from the terminal — no dashboard required.
+
+> **Scope**: runs entirely **locally** against a Docker-based Supabase stack — no cloud project or account required.  
+> The debugging concepts apply equally to cloud projects. The skill above is the portable component.
 
 ---
 
 ## ⚠ Disclaimer — No Warranty
 
-This repository and its associated skill (`skills/supabase-validation/SKILL.md`) are provided as-is, without warranty of any kind.
+This repository and its associated skill are provided as-is, without warranty of any kind.
 
 - This code may modify databases, policies, migrations, or deployed functions.
 - You are responsible for understanding the environment (local, staging, production) before executing any command.
@@ -32,7 +78,7 @@ Supabase failures are often silent. A policy change, a schema drift, or a miscon
 
 This repo encodes a validation-first contract: every Supabase action has a defined pass condition, and done means the pass condition was confirmed — not that the code was written.
 
-The episodes demonstrate real failure modes. The skill (`skills/supabase-validation/SKILL.md`) captures the patterns as an agent-enforceable standard you can drop into any project. See `docs-public/SKILLS_METHODOLOGY.md` for the full annotated reference.
+The episodes demonstrate real failure modes. The skill captures the patterns as an agent-enforceable standard you can drop into any project. See [`docs-public/SKILLS_METHODOLOGY.md`](docs-public/SKILLS_METHODOLOGY.md) for the full annotated reference.
 
 ---
 
@@ -61,7 +107,7 @@ pnpm epN:run
 pnpm epN:verify
 ```
 
-Replace `N` with `1`, `2`, `3`, `4`, `5`, or `6`.
+Replace `N` with `1` through `10`.
 
 ### Reset commands
 
@@ -78,69 +124,64 @@ Replace `N` with `1`, `2`, `3`, `4`, `5`, or `6`.
 
 ```
 supabase-debug-playground/
+├── SKILL.md                      ← installable Supabase Validation Skill (Agent Skills standard)
+├── references/                   ← one file per pattern, loaded on demand by npx skills add
+│   ├── pattern-01-edge-function-local.md
+│   ├── pattern-02-edge-function-production.md
+│   ├── pattern-03-rpc.md
+│   ├── pattern-04-crud-insert.md
+│   ├── pattern-05-rls.md
+│   ├── pattern-06-schema-migration.md
+│   ├── pattern-07-auth-gated-query.md
+│   ├── pattern-08-realtime-subscription.md
+│   ├── pattern-09-rpc-auth-context.md
+│   └── pattern-10-query-performance.md
+│
 ├── .env.example
-├── .gitignore
 ├── package.json
 ├── tsconfig.json
-│
-├── skills/
-│   └── supabase-validation/
-│       └── SKILL.md              ← installable Supabase Validation Skill (Agent Skills standard)
 │
 ├── docs-public/
 │   └── SKILLS_METHODOLOGY.md    ← full annotated skill reference + playground methodology
 │
-├── prompts/                      ← episode briefs + replay prompts for each episode
-│   ├── ep1.md
-│   ├── ep2.md
-│   ├── ep3.md
-│   ├── ep4.md
-│   ├── ep5.md
-│   └── ep6.md
+├── prompts/                      ← episode briefs + replay prompts
+│   ├── ep1.md  through  ep10.md
 │
 ├── scripts/
 │   ├── utils.ts                  ← shared helpers (clients, logging, state)
-│   ├── ep1_edge_function.ts      ← ep1:run target
-│   ├── ep2_rpc.ts                ← ep2:run target
-│   ├── ep3_crud.ts               ← ep3:run target (also patched by ep3:break)
-│   ├── ep4_rls.ts                ← ep4:run target
-│   ├── ep5_schema_drift.ts       ← ep5:run target
-    ├── reset.ts                  ← deep reset (restores files + drops ep5 column + db reset)
+│   ├── ep1_edge_function.ts      ← ep1:run
+│   ├── ep2_rpc.ts                ← ep2:run
+│   ├── ep3_crud.ts               ← ep3:run
+│   ├── ep4_rls.ts                ← ep4:run
+│   ├── ep5_schema_drift.ts       ← ep5:run
+│   ├── ep7_auth.ts               ← ep7:run
+│   ├── ep8_realtime.ts           ← ep8:run
+│   ├── ep9_rpc_auth.ts           ← ep9:run
+│   ├── ep10_perf.ts              ← ep10:run
+│   ├── reset.ts                  ← deep reset
 │   └── episodes/
-│       ├── _shared/
-│       │   └── patch.ts          ← text-patch helper (applyPatch, swapFile, …)
-│       ├── ep1/
-│       │   ├── break.ts          ← ep1:break
-│       │   └── verify.ts         ← ep1:verify
-│       ├── ep2/
+│       ├── ep1/ … ep10/
 │       │   ├── break.ts
+│       │   ├── fix.ts
 │       │   └── verify.ts
-│       ├── ep3/
-│       │   ├── break.ts
-│       │   └── verify.ts
-│       ├── ep4/
-│       │   ├── break.ts
-│       │   └── verify.ts
-│       └── ep5/
-│           ├── break.ts
-│           └── verify.ts
+│       └── _shared/
+│           └── patch.ts
 │
 └── supabase/
-    ├── seed.sql
-    ├── types.gen.ts              ← committed baseline (no `notes`); ep5:break overwrites; fix = supabase gen types
+    ├── seed.sql                  ← includes 10k receipts rows for EP10 EXPLAIN plans
+    ├── types.gen.ts
     ├── config.toml
     ├── functions/
-    │   ├── echo/
-
-```
-    │   │   ├── index.ts          ← active (good) version
-    │   │   └── index.broken.ts   ← intentional bugs for ep1:break
+    │   ├── echo/                 ← EP1 + EP6
     │   └── secure-write/
-    │       └── index.ts          ← bonus reference: server-side service_role insert (not wired to an episode)
     └── migrations/
         ├── 20240101000000_create_tables.sql
         ├── 20240101000001_create_rpc.sql
-        └── 20240101000002_rls_policies.sql
+        ├── 20240101000002_rls_policies.sql
+        ├── 20240101000003_user_notes.sql       ← EP7: user_notes + RLS
+        ├── 20240101000004_get_my_notes_rpc.sql ← EP9: get_my_notes RPC
+        ├── 20240101000005_realtime_publication.sql ← EP8: realtime publication
+        └── 20240101000006_receipts_ep10_index.sql  ← EP10: created_at index
 ```
 
 ---
@@ -164,7 +205,7 @@ supabase-debug-playground/
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/your-org/supabase-debug-playground
+git clone https://github.com/visaoenhance/supabase-debug-playground
 cd supabase-debug-playground
 pnpm install
 
@@ -378,6 +419,116 @@ Response body: "Internal Server Error"
 
 ---
 
+### Episode 7 — Auth-Gated Queries
+
+> **Concept**: RLS policies using `auth.uid()` produce 3 distinct states (no session / wrong user / owner) that all return `[]` with no error — silent failures unless you test each one.
+
+> **Validation skill**: [Pattern 7](references/pattern-07-auth-gated-query.md)
+
+| Command | What happens |
+|---------|-------------|
+| `pnpm ep7:break` | Drops the `user_notes` RLS select policy so no authenticated user gets rows |
+| `pnpm ep7:run` | Tests all 3 auth states and shows which pass/fail |
+| `pnpm ep7:verify` | Restores policy and asserts all 3 states produce expected results |
+
+**The 3 states you must always test:**
+
+| State | Caller | Expected |
+|-------|--------|---------|
+| No session | Anon key, no JWT | `[]` — no data leaked |
+| Wrong user | Signed-in but doesn't own rows | `[]` — RLS scoped |
+| Owner | Signed-in and owns rows | Rows returned |
+
+**Key insight**: states 1 and 2 look identical (both return `[]`). The only way to know RLS is working correctly — not just silently empty — is to test the owner state too.
+
+---
+
+### Episode 8 — Realtime Subscription
+
+> **Concept**: Realtime events require the table to be in `pg_publication_tables`. A missing entry causes silent event timeout — subscription status shows `SUBSCRIBED`, inserts succeed, but events never arrive.
+
+> **Validation skill**: [Pattern 8](references/pattern-08-realtime-subscription.md)
+
+| Command | What happens |
+|---------|-------------|
+| `pnpm ep8:break` | Removes `receipts` from the `supabase_realtime` publication |
+| `pnpm ep8:run` | Sets up a subscription, inserts a row, waits for the event — times out silently |
+| `pnpm ep8:verify` | Re-adds the table to the publication, confirms event is received |
+
+**Diagnostic SQL**:
+```sql
+SELECT tablename FROM pg_publication_tables WHERE pubname = 'supabase_realtime';
+```
+
+**Fix**:
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE public.receipts;
+```
+
+**CRITICAL**: register your `.on()` listener **before** calling `.subscribe()` — adding it after silently drops the callback.
+
+---
+
+### Episode 9 — RPC Auth Context
+
+> **Concept**: `auth.uid()` returns `NULL` when no JWT is present. Without a null guard, `WHERE col = NULL` silently returns an empty set instead of raising an error.
+
+> **Validation skill**: [Pattern 9](references/pattern-09-rpc-auth-context.md)
+
+| Command | What happens |
+|---------|-------------|
+| `pnpm ep9:break` | Replaces `get_my_notes` with a version missing the `auth.uid()` null guard |
+| `pnpm ep9:run` | Calls the RPC without authentication — shows silent empty result instead of error |
+| `pnpm ep9:verify` | Restores null guard, confirms unauthenticated call raises error, authenticated returns data |
+
+**Required null guard pattern**:
+```sql
+IF auth.uid() IS NULL THEN
+  RAISE EXCEPTION 'not authenticated'
+    USING ERRCODE = 'PT401',
+          HINT    = 'Call this function with an authenticated session';
+END IF;
+```
+
+**Grant hardening** (also verified):
+```sql
+REVOKE EXECUTE ON FUNCTION public.get_my_notes() FROM public, anon;
+GRANT  EXECUTE ON FUNCTION public.get_my_notes() TO authenticated;
+```
+
+---
+
+### Episode 10 — Query Performance
+
+> **Concept**: Missing indexes on filter/sort columns cause Seq Scans that scale linearly. EXPLAIN plan shape (Index Scan vs Seq Scan) is the correct assertion — not timing alone.
+
+> **Validation skill**: [Pattern 10](references/pattern-10-query-performance.md)
+
+| Command | What happens |
+|---------|-------------|
+| `pnpm ep10:break` | Drops the `created_at DESC` index from `receipts` |
+| `pnpm ep10:run` | Runs EXPLAIN ANALYZE on a date-range + ORDER BY query — shows Seq Scan |
+| `pnpm ep10:verify` | Recreates index, runs ANALYZE, asserts EXPLAIN shows Index Scan |
+
+**Seed**: `supabase/seed.sql` inserts 10,000 rows via `generate_series` so the planner chooses Index Scan when the index is present.
+
+**Expected EXPLAIN (broken)**:
+```
+Seq Scan on receipts  (rows=10000 ...)
+  → Sort
+    → Limit
+```
+
+**Expected EXPLAIN (verified)**:
+```
+Limit
+  → Index Scan Backward using receipts_created_at_desc_idx on receipts
+```
+
+**Production note**: use `CREATE INDEX CONCURRENTLY` to avoid table-level locks. Cannot be used inside a transaction block.
+
+---
+
 ## Utility Commands
 
 | Command | Description |
@@ -393,23 +544,20 @@ Response body: "Internal Server Error"
 
 ---
 
-## Supabase Validation Skill
+## Using the Validation Skill in Your Own Project
 
-[`skills/supabase-validation/SKILL.md`](skills/supabase-validation/SKILL.md) is a standalone, installable agent skill encoding the principle: **before reporting any Supabase action as complete, run the appropriate validation and confirm it passes.**
+The portable component is the Supabase Validation Skill — [`SKILL.md`](SKILL.md) at the repo root, with 10 reference files in [`references/`](references/).
 
-Drop it into your project's agent context file:
-- **Cursor**: `.cursorrules`
-- **Claude Code**: `CLAUDE.md`
-- **Copilot**: `.github/copilot-instructions.md`
+Install via the Agent Skills standard:
 
-Or install via the Agent Skills standard:
 ```bash
 npx skills add visaoenhance/supabase-debug-playground
 ```
 
-> This installs only the validation skill — not the playground scripts or reset/break commands.
-
-The skill covers all 6 patterns introduced in this series: edge functions (local + prod), RPC, CRUD, RLS, and schema drift.
+Or drop [`SKILL.md`](SKILL.md) into your project's agent context file:
+- **Cursor**: `.cursorrules`
+- **Claude Code**: `CLAUDE.md`
+- **GitHub Copilot**: `.github/copilot-instructions.md`
 
 For the full annotated reference including playground methodology, see [`docs-public/SKILLS_METHODOLOGY.md`](docs-public/SKILLS_METHODOLOGY.md).
 
@@ -460,13 +608,9 @@ All local Supabase commands require Docker Desktop to be running.
 
 ---
 
-## Using the Validation Skill in Your Own Project
+## Prompts and Verify Scripts in Your Own Project
 
-This repository is a local teaching harness. The portable component is the Supabase Validation Skill ([`skills/supabase-validation/SKILL.md`](skills/supabase-validation/SKILL.md)). Drop that file into your project's agent context to enforce validation discipline automatically.
-
-For deeper context on the methodology and how the skill relates to the playground episodes, see [`docs-public/SKILLS_METHODOLOGY.md`](docs-public/SKILLS_METHODOLOGY.md).
-
-The patterns, prompts, and verify scripts are also portable. Here is what maps across:
+The patterns, prompts, and verify scripts are also portable without installing the full skill.
 
 ### Prompts → Cursor / Copilot rules
 
