@@ -5,7 +5,7 @@ license: MIT
 compatibility: "Compatible with Cursor, Claude Code, and GitHub Copilot agent mode. Requires supabase CLI and Node >= 20 for local validation commands. Works with any project using Supabase (local or remote)."
 metadata:
   author: visaoenhance
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 > **This skill is safe for use in any project.**
@@ -281,6 +281,10 @@ appear in code, config, or commands:
 - Any file under `supabase/functions/` is modified
 - Any file under `supabase/migrations/` or `supabase/seed.sql` is modified
 - Any `supabase db *` command is run (push/reset/diff)
+- `auth.uid()` is used in any SQL function or RLS policy
+- A `supabase_realtime` publication is modified (`ALTER PUBLICATION`)
+- An index is created or dropped on a table with significant row count
+- `supabase.auth.signInWithPassword()` or `auth.admin.createUser()` is used in validation code
 
 **When activated:**
 - Add a validation step to the task plan before execution begins
@@ -328,6 +332,10 @@ It is complete only when the validation step passes.
 | 4 — CRUD / Insert | Any `.insert()`, `.update()`, `.delete()` via supabase-js | Non-null array with `id` present |
 | 5 — RLS | `CREATE POLICY`, `DROP POLICY`, `ENABLE ROW LEVEL SECURITY` | All 3 roles pass: unauthed blocked + authed allowed + service_role allowed |
 | 6 — Schema migration | Migration adding, removing, or renaming a column | `types.gen.ts` reflects live schema + file committed |
+| 7 — Auth-gated query | Any query on a table with `auth.uid()` RLS policies | All 3 auth states pass: no session → empty, wrong user → empty, owner → rows |
+| 8 — Realtime subscription | Any change to Realtime publication membership | `pg_publication_tables` confirms table is in publication + INSERT event received |
+| 9 — RPC auth context | RPC using `auth.uid()` without a null guard | Error raised (not empty result) on unauthenticated call + `anon` execute revoked |
+| 10 — Query performance | Migration adding or dropping an index on a frequently queried column | EXPLAIN shows Index Scan (not Seq Scan) on representative query |
 
 ---
 
@@ -515,3 +523,175 @@ build if the diff is non-empty.
 
 **Do not report done until:** `types.gen.ts` reflects the current live schema
 and the file is committed.
+
+---
+
+## Pattern 7 — Auth-Gated Query
+
+**Trigger:** after any change to a table's RLS policies that use `auth.uid()`, or
+after any client-side code that queries such a table.
+
+**The 3-state requirement:** `auth.uid()` policies create three distinct
+behaviours that must all be tested — not just the happy path:
+
+| State | Caller | Expected result |
+|---|---|---|
+| No session | Anon key, no JWT | Empty array (or explicit error if a null guard is configured) — no data leaked |
+| Wrong user | Signed-in user who does not own the rows | Empty array — RLS scopes to `auth.uid()` |
+| Owner | Signed-in user who owns the rows | Rows returned |
+
+**Why states 1 and 2 look identical:** both return `[]` with no error — a
+developer cannot tell whether the table is empty, RLS is blocking them, or they
+forgot to sign in. The agent must test all three explicitly.
+
+**Validation steps:**
+1. Confirm `relrowsecurity = t` via `pg_class`
+2. Create two test users via `admin.auth.admin.createUser`
+3. State 1 — query with no session → assert empty array
+4. State 2 — query signed in as the non-owner → assert empty array
+5. State 3 — query signed in as the owner → assert rows returned
+6. Delete test users after validation
+
+**Diagnostic:**
+```sql
+SELECT relname, relrowsecurity FROM pg_class WHERE relname = '<table>';
+SELECT policyname, cmd, qual FROM pg_policies WHERE tablename = '<table>';
+```
+
+**Docs:**
+- [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- [Auth Helpers](https://supabase.com/docs/guides/auth)
+
+**Do not report done until:** all 3 auth states produce the expected result.
+
+---
+
+## Pattern 8 — Realtime Subscription
+
+**Trigger:** after any `ALTER PUBLICATION supabase_realtime ADD TABLE` or
+`DROP TABLE`, or after any change to a table whose changes are observed via
+`supabase.channel(...).on('postgres_changes', ...)` subscriptions.
+
+**Root cause of silent failures:** Supabase Realtime uses PostgreSQL logical
+replication. A table must be listed in the `supabase_realtime` publication for
+the WAL stream to include its changes. If the table is absent, subscriptions
+operate normally (`SUBSCRIBED` status), inserts succeed, but events are never
+delivered — no error is raised anywhere.
+
+**Validation steps (strict ordering):**
+1. Confirm table membership:
+   ```sql
+   SELECT tablename FROM pg_publication_tables
+   WHERE pubname = 'supabase_realtime' AND tablename = '<table>';
+   ```
+   If absent → the fix is `ALTER PUBLICATION supabase_realtime ADD TABLE public.<table>`. No client-side code change will fix this.
+2. Register the event listener **before** calling `.subscribe()` — registering
+   after the channel is already subscribed silently drops the callback.
+3. Wait for `SUBSCRIBED` status acknowledgment before inserting.
+4. Insert the row after subscription is confirmed ready.
+5. Assert the INSERT event arrives within a timeout (≥ 5 seconds for local dev).
+6. Always unsubscribe and call `client.realtime.disconnect()` in a `finally` block.
+
+**Fail signal:** event timeout with no error. The subscription appears healthy
+(`SUBSCRIBED`) but events never arrive.
+
+**Diagnostic:**
+```sql
+-- Full publication table list
+SELECT pubname, schemaname, tablename FROM pg_publication_tables
+WHERE pubname = 'supabase_realtime';
+```
+
+**Docs:**
+- [Realtime Overview](https://supabase.com/docs/guides/realtime)
+- [Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes)
+
+**Do not report done until:** `pg_publication_tables` confirms membership AND
+an INSERT event is received within timeout.
+
+---
+
+## Pattern 9 — RPC Auth Context
+
+**Trigger:** after any `CREATE OR REPLACE FUNCTION` that references `auth.uid()`
+inside a `SECURITY INVOKER` function body.
+
+**The null guard requirement:** when no JWT is present, `auth.uid()` returns
+`NULL`. A `WHERE author_id = auth.uid()` clause with no null guard returns an
+empty set with no error — the silent failure mode. An explicit null guard raises
+an actionable error instead.
+
+**Required hardening checks (all four must pass):**
+
+| Check | SQL to verify |
+|---|---|
+| `SECURITY INVOKER` declared | `SELECT prosecdef FROM pg_proc WHERE proname = '<fn>'` — must be `f` |
+| `search_path` set | `SELECT proconfig FROM pg_proc WHERE proname = '<fn>'` — must contain `search_path` |
+| `anon` EXECUTE revoked | `SELECT grantee FROM information_schema.role_routine_grants WHERE routine_name = '<fn>'` — `anon` must not appear |
+| `authenticated` EXECUTE granted | Same query — `authenticated` must appear |
+
+**Validation steps:**
+1. Confirm all four hardening checks via `pg_proc` + `role_routine_grants`
+2. Call the function without a session → assert explicit error (not empty array)
+3. Call the function after `signInWithPassword` → assert rows returned
+
+**Correct null guard pattern:**
+```sql
+IF auth.uid() IS NULL THEN
+  RAISE EXCEPTION 'not authenticated'
+    USING ERRCODE = 'PT401',
+          HINT    = 'Call this function with an authenticated session';
+END IF;
+```
+
+**Grant pattern:**
+```sql
+REVOKE EXECUTE ON FUNCTION public.<fn>() FROM public, anon;
+GRANT  EXECUTE ON FUNCTION public.<fn>() TO authenticated;
+```
+
+**Docs:**
+- [Database Functions](https://supabase.com/docs/guides/database/functions)
+- [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
+
+**Do not report done until:** unauthenticated call returns explicit error + authenticated call returns data + all 4 hardening checks pass.
+
+---
+
+## Pattern 10 — Query Performance
+
+**Trigger:** after any migration that creates or drops an index, or after any
+report of a slow query on a large table.
+
+**Core diagnostic:** run `EXPLAIN (ANALYZE, BUFFERS)` on the representative
+query and assert plan shape — not execution time alone, since timing varies.
+
+**Validation steps:**
+1. Confirm row count is meaningful (≥ 1,000 rows; seed if needed)
+2. Confirm index exists via `pg_indexes`:
+   ```sql
+   SELECT indexname, indexdef FROM pg_indexes WHERE tablename = '<table>';
+   ```
+3. Run `ANALYZE <table>` to ensure planner statistics are current
+4. Run `EXPLAIN (ANALYZE, BUFFERS)` on the query and assert:
+   - With index present: plan contains `Index Scan` (or `Index Only Scan` / `Bitmap Index Scan`) — **not** `Seq Scan`
+   - Without index: plan contains `Seq Scan` (confirms the break state)
+
+**Index direction matters:** for `ORDER BY created_at DESC LIMIT N` queries,
+create the index as `(created_at DESC)` — the planner can then avoid a sort step
+entirely.
+
+**Production note:** use `CREATE INDEX CONCURRENTLY` in production to avoid
+holding an exclusive lock on the table during index creation. This cannot be
+used inside a transaction block.
+
+**Key insight:** a Seq Scan with a small table is normal — the planner chooses
+Seq Scan below its cost threshold regardless of index presence. Use ≥ 1,000
+rows to get a meaningful EXPLAIN result.
+
+**Docs:**
+- [EXPLAIN](https://www.postgresql.org/docs/current/sql-explain.html)
+- [Supabase Indexes](https://supabase.com/docs/guides/database/postgres/indexes)
+- [Debugging and Monitoring](https://supabase.com/docs/guides/database/inspect)
+
+**Do not report done until:** EXPLAIN shows Index Scan on a ≥ 1,000 row table.

@@ -51,12 +51,40 @@
     "ep6:preflight": "tsx scripts/ep6_preflight.ts",
     "setup:ep6:env": "tsx scripts/setup_ep6_env.ts",
 
+    "ep7:reset":  "supabase db reset",
+    "ep7:break":  "tsx scripts/episodes/ep7/break.ts",
+    "ep7:fix":    "tsx scripts/episodes/ep7/fix.ts",
+    "ep7:run":    "tsx scripts/ep7_auth.ts run",
+    "ep7:verify": "tsx scripts/episodes/ep7/verify.ts",
+
+    "ep8:reset":  "supabase db reset",
+    "ep8:break":  "tsx scripts/episodes/ep8/break.ts",
+    "ep8:fix":    "tsx scripts/episodes/ep8/fix.ts",
+    "ep8:run":    "tsx scripts/ep8_realtime.ts run",
+    "ep8:verify": "tsx scripts/episodes/ep8/verify.ts",
+
+    "ep9:reset":  "supabase db reset",
+    "ep9:break":  "tsx scripts/episodes/ep9/break.ts",
+    "ep9:fix":    "tsx scripts/episodes/ep9/fix.ts",
+    "ep9:run":    "tsx scripts/ep9_rpc_auth.ts run",
+    "ep9:verify": "tsx scripts/episodes/ep9/verify.ts",
+
+    "ep10:reset":  "supabase db reset",
+    "ep10:break":  "tsx scripts/episodes/ep10/break.ts",
+    "ep10:fix":    "tsx scripts/episodes/ep10/fix.ts",
+    "ep10:run":    "tsx scripts/ep10_perf.ts run",
+    "ep10:verify": "tsx scripts/episodes/ep10/verify.ts",
+
     "ep1:prompt": "pbcopy < prompts/ep1.md && echo 'EP1 prompt copied to clipboard — paste into a new chat'",
     "ep2:prompt": "pbcopy < prompts/ep2.md && echo 'EP2 prompt copied to clipboard — paste into a new chat'",
     "ep3:prompt": "pbcopy < prompts/ep3.md && echo 'EP3 prompt copied to clipboard — paste into a new chat'",
     "ep4:prompt": "pbcopy < prompts/ep4.md && echo 'EP4 prompt copied to clipboard — paste into a new chat'",
     "ep5:prompt": "pbcopy < prompts/ep5.md && echo 'EP5 prompt copied to clipboard — paste into a new chat'",
     "ep6:prompt": "pbcopy < prompts/ep6.md && echo 'EP6 prompt copied to clipboard — paste into a new chat'",
+    "ep7:prompt": "pbcopy < prompts/ep7.md && echo 'EP7 prompt copied to clipboard — paste into a new chat'",
+    "ep8:prompt": "pbcopy < prompts/ep8.md && echo 'EP8 prompt copied to clipboard — paste into a new chat'",
+    "ep9:prompt": "pbcopy < prompts/ep9.md && echo 'EP9 prompt copied to clipboard — paste into a new chat'",
+    "ep10:prompt": "pbcopy < prompts/ep10.md && echo 'EP10 prompt copied to clipboard — paste into a new chat'",
 
     "ep:runbook": "tsx scripts/runbook.ts",
 

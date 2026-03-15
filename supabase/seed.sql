@@ -26,3 +26,19 @@ values
     14.00
   )
 on conflict (id) do nothing;
+
+-- ── EP10 seed: 10,000 time-spread receipts for query performance testing ──────
+-- created_at is spread across 10,000 hours (~14 months of history).
+-- A 7-day date range covers ~168 rows (1.7% selectivity) — reliably triggers
+-- Index Scan after fix and Seq Scan after drop (confirmed with ANALYZE).
+insert into public.receipts (user_id, title, amount, created_at)
+select
+  case when (i % 2 = 0)
+    then '00000000-0000-0000-0000-000000000001'::uuid
+    else '00000000-0000-0000-0000-000000000002'::uuid
+  end,
+  'EP10 receipt #' || i,
+  round((1 + (i % 200))::numeric, 2),
+  now() - (i || ' hours')::interval
+from generate_series(1, 10000) i
+on conflict do nothing;
