@@ -28,15 +28,15 @@ const QUERY =
 
 function psqlt(sql: string): string {
   return execSync(
-    `docker exec ${DB_CONTAINER} psql -U postgres -tAc "${sql.replace(/"/g, '\\"')}"`,
-    { encoding: "utf-8" }
+    `docker exec -i ${DB_CONTAINER} psql -U postgres -tAc`,
+    { encoding: "utf-8", input: sql }
   ).trim();
 }
 
 function psqlFull(sql: string): string {
   return execSync(
-    `docker exec ${DB_CONTAINER} psql -U postgres -c "${sql.replace(/"/g, '\\"')}"`,
-    { encoding: "utf-8" }
+    `docker exec -i ${DB_CONTAINER} psql -U postgres -c`,
+    { encoding: "utf-8", input: sql }
   );
 }
 
